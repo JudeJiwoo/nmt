@@ -1,0 +1,53 @@
+defaults:
+  - nn_params: nb5_embSum_decCross
+
+# Pop1k7, Pop909, LakhClean, SOD, BachChorale
+dataset: SOD
+use_ddp: False
+use_fp16: True
+
+train_params:
+  device: cuda
+  batch_size: 8
+  grad_clip: 1.0
+  num_iter: 100000
+  num_cycles_for_inference: 10
+  num_cycles_for_model_checkpoint: 10
+  iterations_per_training_cycle: 10
+  iterations_per_validation_cycle: 3000
+  # input sequence length
+  input_length: 1024
+  # focal loss
+  focal_alpha: 1
+  focal_gamma: 0
+  # learning rate
+  scheduler : cosinelr # 'cosineannealingwarmuprestarts', 'not-using'
+  initial_lr: 0.0001
+  decay_step_rate: 0.8 # means it will reach its lowest point at decay_step_rate * total_num_iter
+  num_steps_per_cycle: 20000
+  warmup_steps: 2000
+  max_lr: 0.00015
+  gamma: 0.6
+  # share embedding between transformer and pred strategy
+  emb_share: False
+  world_size: 0
+inference_params:
+  n_uncond_generation: 1
+  n_cond_generation: 3
+  # sampling_method: multinomial # 'multinomial', 'nucleus'
+  # nucleus_p: {'type': 1.0, 'beat': 1.0, 'chord': 1.0, 'tempo': 1.0, 'instrument': 1.0, 'pitch': 1.0, 'duration': 1.0, 'velocity': 1.0}
+  # temperature: {'type': 1.0, 'beat': 1.0, 'chord': 1.0, 'tempo': 1.0, 'instrument': 1.0, 'pitch': 1.0, 'duration': 1.0, 'velocity': 1.0}
+data_params:
+  num_features: 5 # 4, 5, 7, 8
+  encoding_scheme: cp # remi, cp, nb
+  first_pred_feature: type # type, beat, chord, tempo, pitch, duration, velocity
+  split_ratio: 0.8
+  aug_type: random # 'random', null
+general:
+  debug: False
+  make_log: True
+  save_attn_output: True
+  infer_and_log: True
+  log_train_metric: True
+  log_all_feature_loss: True # for cp and nb not remi
+  save_dir: 'runs/'

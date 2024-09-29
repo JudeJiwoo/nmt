@@ -1,0 +1,13 @@
+REMI-tempo-chord-checkpoint/
+REMI_decoded/
+dataset
+__pycache__/
+analysis/
+outputs/
+pre_trained/
+wandb/
+*.csv
+*.pyc
+*.pkl
+.vscode/
+checkpoints/

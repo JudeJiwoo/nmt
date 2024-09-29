@@ -1,0 +1,21 @@
+vocab_name: LangTokenVocab
+model_name: DoubleSequentialTransformer
+input_embedder_name: SingleEmbedding
+main_decoder_name: XtransformerDecoder
+sub_decoder_name: SingleProjectionStrategy
+main_decoder:
+  input_length: 8192 # <<<<<<-------
+  dim_model: 512 # <<<<<<-------
+  num_layer: 8 # <<<<<<-------
+  dropout: 0.1
+  num_head: 8
+emb:
+  emb_size: 512
+  total_size: -1
+  type: 0.0625 # cp 32
+  beat: 0.125 # 64
+  instrument: 0.25 # cp 128
+  pitch: 1 # cp 512
+  duration: 0.25 # cp 128
+
+prediction_order: ['type', 'beat', 'instrument', 'pitch', 'duration']

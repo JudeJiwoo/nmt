@@ -1,0 +1,17 @@
+program: train.py
+method: grid
+metric:
+  name: valid.total
+  goal: minimize
+parameters:
+  train_params.batch_size:
+    values: [8]
+  train_params.focal_gamma:
+    values: [0, 1]
+  nn_params.main_decoder.input_length:
+    values: [8192]
+
+command:
+  - python3
+  - ${program}
+  - ${args_no_hyphens}

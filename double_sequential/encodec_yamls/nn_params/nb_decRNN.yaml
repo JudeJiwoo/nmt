@@ -1,0 +1,22 @@
+vocab_name: EncodecVocab
+model_name: EncodecDoubleSeqTransformer
+input_embedder_name: SummationEmbedder
+main_decoder_name: XtransformerDecoder
+sub_decoder_name: RNN_Strategy
+input_embedder:
+  num_layer: 1
+  num_head: 8
+  dropout: 0.1
+main_decoder:
+  dim_model: 512
+  num_layer: 6
+  num_head: 8
+  dropout: 0.1
+sub_decoder:
+  rnn_hidden_size: 1024
+  decout_window_size: 1 # 1 means no previous decoding output added
+  num_layer: 1
+  feature_enricher_use: False
+
+# sequential prediction k1 1st
+prediction_order: ['k1', 'k2', 'k3', 'k4']

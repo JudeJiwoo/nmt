@@ -1,0 +1,43 @@
+defaults:
+  - nn_params: remi_flatten
+
+dataset: EncodecDataset
+data_type: finetuned # finetuned, semcodec, vanilla
+use_ddp: False
+use_fp16: True
+
+train_params:
+  device: 'cuda'
+  batch_size: 8
+  grad_clip: 1.0
+  num_iter: 200000 
+  num_cycles_for_inference: 100
+  num_cycles_for_model_checkpoint: 20
+  iterations_per_training_cycle: 10
+  iterations_per_validation_cycle: 3000
+  # input sequence length
+  input_length: 6000
+  # learning rate
+  scheduler : cosinelr # 'cosineannealingwarmuprestarts', 'not-using'
+  initial_lr: 0.0001
+  decay_step_rate: 0.8 # means it will reach its lowest point at decay_step_rate * total_num_iter
+  num_steps_per_cycle: 20000
+  warmup_steps: 2000
+  max_lr: 0.00015
+  gamma: 0.6
+  world_size: 0
+inference_params:
+  n_uncond_generation: 0
+  n_cond_generation: 0
+data_params:
+  num_features: 4
+  encoding_scheme: nb # remi or nb or nb_delay
+  first_pred_feature: k1
+general:
+  debug: False
+  make_log: False 
+  save_attn_output: True 
+  infer_and_log: True 
+  log_train_metric: True 
+  log_all_feature_loss: True # for cp and nb not remi 
+  save_dir: 'runs/'
