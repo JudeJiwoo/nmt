@@ -27,10 +27,6 @@ We focus on symbolic music and limit the use of musical features to a select few
 
 - `--debug`: This flag enables debug mode when included. No additional value is needed.
 
-<p align="center">
-<img src="../figure/Data_Representation_Pipeline.png" width="500">
-</p>
-
 ## 1. MIDI to Corpus
 In this step, we convert MIDI files into a set of events containing various musical information. The MIDI files should be aligned with the beat and contain accurate time signature information. Place the MIDI files in `<nmt/dataset/MIDI_dataset>` and refer to the example files provided. Navigate to the `<nmt/data_representation>` folder and run the script. The converted data will be stored in `<nmt/dataset/represented_data/corpus>`.
 
