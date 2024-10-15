@@ -74,7 +74,7 @@ class CorpusMaker():
   def _get_in_beat_resolution(self):
     # Retrieve the resolution of quarter note based on the dataset name (e.g., 4 means the minimum resolution sets to 16th note)
     in_beat_resolution_dict = {'BachChorale': 4, 'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4, 'SymphonyMIDI': 8}
-    self.in_beat_resolution = in_beat_resolution_dict[self.dataset]
+    self.in_beat_resolution = in_beat_resolution_dict[self.dataset_name]
 
   def _get_duration_bins(self):
     # Set up regular duration bins for quantizing note lengths, based on the beat resolution.
@@ -103,7 +103,7 @@ class CorpusMaker():
     0 to 2000 means no limitation
     '''
     last_time_dict = {'BachChorale': (0, 2000), 'Pop1k7': (0, 2000), 'Pop909': (0, 2000), 'SOD': (60, 1000), 'LakhClean': (60, 600), 'Symphony': (60, 1500)}
-    self.min_last_time, self.max_last_time = last_time_dict[self.dataset]
+    self.min_last_time, self.max_last_time = last_time_dict[self.dataset_name]
 
   def _prepare_midi_list(self):
     midi_path = Path(self.midi_path)
@@ -117,8 +117,8 @@ class CorpusMaker():
     print("preprocessing midi data to corpus data")
     # check the corpus folder is already exist and make it if not
     Path(self.out_dir).mkdir(parents=True, exist_ok=True)
-    Path(self.out_dir / f"corpus_{self.dataset}").mkdir(parents=True, exist_ok=True)
-    Path(self.out_dir / f"midi_{self.dataset}").mkdir(parents=True, exist_ok=True)
+    Path(self.out_dir / f"corpus_{self.dataset_name}").mkdir(parents=True, exist_ok=True)
+    Path(self.out_dir / f"midi_{self.dataset_name}").mkdir(parents=True, exist_ok=True)
     start_time = time.time()
     if self.debug:
       # single processing for debugging
@@ -149,11 +149,11 @@ class CorpusMaker():
       corpus, midi_obj = self._midi2corpus(midi_obj)
       # Save corpus as a pickle file and the corresponding MIDI object.
       filename = file_path.stem + ".pkl"  # Get the stem (filename without extension) of the original file path
-      save_path = Path(self.out_dir) / f"corpus_{self.dataset}" / filename  # Create a new Path object for saving
+      save_path = Path(self.out_dir) / f"corpus_{self.dataset_name}" / filename  # Create a new Path object for saving
       with save_path.open('wb') as f:
         pickle.dump(corpus, f)
       midiname = file_path.stem + ".mid"
-      save_path = Path("../dataset/represented_data/corpus") / f"midi_{self.dataset}" / midiname
+      save_path = Path("../dataset/represented_data/corpus") / f"midi_{self.dataset_name}" / midiname
       midi_obj.dump(save_path)
       del midi_obj, corpus
       return "success"
@@ -280,7 +280,7 @@ class CorpusMaker():
       raise ValueError('[x] Duplicated time_signature_changes')
     
     # If the dataset is 'LakhClean' or 'SymphonyMIDI', verify there are at least 4 tracks.
-    if self.dataset == 'LakhClean' or self.dataset == 'SymphonyMIDI':
+    if self.dataset_name == 'LakhClean' or self.dataset_name == 'SymphonyMIDI':
       if len(midi_obj.instruments) < 4:
         raise ValueError('[x] We will use more than 4 tracks in Lakh Clean dataset.')
     

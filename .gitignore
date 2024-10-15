@@ -1,6 +1,7 @@
 REMI-tempo-chord-checkpoint/
 REMI_decoded/
 dataset
+vocab
 __pycache__/
 analysis/
 outputs/

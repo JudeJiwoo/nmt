@@ -90,8 +90,7 @@ class TuneCompiler():
 class SymbolicMusicDataset():
   def __init__(
       self, 
-      in_vocab_file_path:Path, 
-      out_vocab_path:Union[Path, None],
+      vocab: vocab_utils.LangTokenVocab,
       encoding_scheme:str, 
       num_features:int, 
       debug:bool, 
@@ -99,10 +98,6 @@ class SymbolicMusicDataset():
       input_length:int,
       first_pred_feature:str
   ):
-    '''
-    this class is for symbolic music dataset
-    remi, cp, nb are three encoding schemes possible to use
-    '''
     self.encoding_scheme = encoding_scheme
     self.num_features = num_features
     self.debug = debug
@@ -110,15 +105,7 @@ class SymbolicMusicDataset():
     self.first_pred_feature = first_pred_feature
 
     # get vocab
-    vocab_name = {'remi':'LangTokenVocab', 'cp':'MusicTokenVocabCP', 'nb':'MusicTokenVocabNB'}
-    selected_vocab_name = vocab_name[encoding_scheme]
-    self.vocab = getattr(vocab_utils, selected_vocab_name)(
-      in_vocab_file_path=in_vocab_file_path,
-      event_data=None,
-      encoding_scheme=encoding_scheme, 
-      num_features=num_features)
-    if out_vocab_path is not None:
-      self.vocab.save_vocab(out_vocab_path)
+    self.vocab = vocab
     
     # get augmentor
     self.augmentor = Augmentor(vocab=self.vocab, aug_type=aug_type, input_length=input_length)

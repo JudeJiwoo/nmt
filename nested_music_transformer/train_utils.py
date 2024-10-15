@@ -5,7 +5,19 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim import Optimizer
 from collections import defaultdict
 
-from .utils import add_conti_for_single_feature
+def add_conti_for_single_feature(tensor):
+  new_target = tensor.clone()
+  # Assuming tensor shape is [batch, sequence, features]
+  # Create a shifted version of the tensor
+  shifted_tensor = torch.roll(new_target, shifts=1, dims=1)
+  # The first element of each sequence cannot be a duplicate by definition
+  shifted_tensor[:, 0] = new_target[:, 0] + 1
+  
+  # Identify where the original and shifted tensors are the same (duplicates)
+  duplicates = new_target == shifted_tensor
+  # Replace duplicates with 9999
+  new_target[duplicates] = 9999
+  return new_target
 
 ########################### Loss function ################################
 

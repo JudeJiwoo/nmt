@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from tqdm.auto import tqdm
 
 from . import transformer_utils
-from . import prediction_strategies
+from . import sub_decoder_zoo
 from x_transformers.x_transformers import LayerIntermediates, AbsolutePositionalEmbedding
 
 class DoubleSequentialTransformerWrapper(nn.Module):
@@ -53,7 +53,7 @@ class DoubleSequentialTransformerWrapper(nn.Module):
     )
   
   def _get_sub_decoder(self, sub_decoder_name, prediction_order, vocab, sub_decoder_depth, sub_decoder_enricher_use, dim, heads, dropout):
-    self.sub_decoder = getattr(prediction_strategies, sub_decoder_name)(
+    self.sub_decoder = getattr(sub_decoder_zoo, sub_decoder_name)(
       prediction_order=prediction_order,
       vocab=vocab,
       dim=dim,

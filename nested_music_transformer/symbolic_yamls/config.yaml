@@ -1,5 +1,5 @@
 defaults:
-  - nn_params: nb5_embSum_decCross
+  - nn_params: nb5_embSum_decCrossAttention
 
 # Pop1k7, Pop909, LakhClean, SOD, BachChorale
 dataset: SOD
@@ -36,7 +36,7 @@ inference_params:
   n_cond_generation: 3
 data_params:
   num_features: 5 # 4, 5, 7, 8
-  encoding_scheme: remi # remi, cp, nb
+  encoding_scheme: nb # remi, cp, nb
   first_pred_feature: type # type, beat, chord, tempo, instrument, pitch, duration, velocity
   split_ratio: 0.8
   aug_type: random # random, null

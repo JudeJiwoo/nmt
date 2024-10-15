@@ -4,7 +4,7 @@ import torch.nn as nn
 from x_transformers import Decoder
 
 from .transformer_utils import MultiEmbedding, RVQMultiEmbedding
-from .prediction_strategies_utils import *
+from .sub_decoder_utils import *
 from .sampling_utils import sample
 
 class SingleProjectionStrategy(nn.Module):

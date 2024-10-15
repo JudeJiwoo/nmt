@@ -18,10 +18,6 @@ def check_syntax_errors_in_inference_for_nb(generated_output, feature_list):
   beat_backwards_error_list = []
   num_backwards_errors = 0
   for type_beat in type_beat_list:
-    # if type_beat[0] == 3: # same bar, same beat
-    #   if type_beat[1] != 1: # conti
-    #     num_unmatched_errors += 1
-    #     beat_type_unmatched_error_list.append(type_beat)
     if type_beat[0] == 4: # same bar, new beat
       if type_beat[1] == 0 or type_beat[1] == 1:
         num_unmatched_errors += 1
@@ -38,10 +34,6 @@ def check_syntax_errors_in_inference_for_nb(generated_output, feature_list):
       last_note = 1
   unmatched_error_rate = num_unmatched_errors / len(type_beat_list)
   backwards_error_rate = num_backwards_errors / len(type_beat_list)
-  # print(f"error in beat_type unmatched: {beat_type_unmatched_error_list}")
-  # print(f"error in beat backwards: {beat_backwards_error_list}")
-  # print(f"error rate in beat_type unmatched: {unmatched_error_rate}")
-  # print(f"error rate in beat backwards: {backwards_error_rate}")
   type_beat_errors_dict = {'beat_type_unmatched_error': unmatched_error_rate, 'beat_backwards_error': backwards_error_rate}
   return type_beat_errors_dict
 
@@ -75,10 +67,6 @@ def check_syntax_errors_in_inference_for_cp(generated_output, feature_list):
         beat_type_unmatched_error_list.append(token)
   unmatched_error_rate = num_unmatched_errors / len(generated_output)
   backwards_error_rate = num_backwards_errors / len(generated_output)
-  # print(f"error in beat_type unmatched: {beat_type_unmatched_error_list}")
-  # print(f"error in beat backwards: {beat_backwards_error_list}")
-  # print(f"error rate in beat_type unmatched: {unmatched_error_rate}")
-  # print(f"error rate in beat backwards: {backwards_error_rate}")
   type_beat_errors_dict = {'beat_type_unmatched_error': unmatched_error_rate, 'beat_backwards_error': backwards_error_rate}
   return type_beat_errors_dict
 
@@ -115,12 +103,6 @@ def check_syntax_errors_in_inference_for_remi(generated_output, vocab):
   return {'beat_backwards_error': backwards_error_rate}
 
 def type_beat_errors_in_validation_nb(beat_prob, answer_type, input_beat, mask):
-  '''
-  beat_prob: b x t x vocab_size
-  answer_type: type features in shifted_target, b x t
-  input_beat: beat features in tgt, b x t
-  mask: b x t, value is 1 if valid, 0 if invalid
-  '''
   bool_mask = mask.bool().flatten() # (b*t)
   pred_beat_idx = torch.argmax(beat_prob, dim=-1).flatten() # (b*t)
   valid_pred_beat_idx = pred_beat_idx[bool_mask] # valid beat_idx
@@ -139,10 +121,6 @@ def type_beat_errors_in_validation_nb(beat_prob, answer_type, input_beat, mask):
     # update last note
     if input_beat_idx.item() >= 1: # beat
       last_note = input_beat_idx.item()
-    # check errors
-    # if type_beat[0] == 3: # same bar, same beat
-    #   if type_beat[1] != 1:
-    #     num_unmatched_errors += 1
     if type_beat[0] == 4: # same bar, new beat
       if type_beat[1] == 0 or type_beat[1] == 1:
         num_unmatched_errors += 1
@@ -186,7 +164,6 @@ def type_beat_errors_in_validation_cp(beat_prob, answer_type, input_beat, mask):
         num_unmatched_errors += 1
   return len(type_beat_list), num_unmatched_errors, num_backwards_errors
 
-  
 def get_beat_difference_metric(prob_dict, arranged_prob_dict, mask):
   orign_beat_prob = prob_dict['beat'] # b x t x vocab_size
   arranged_beat_prob = arranged_prob_dict['beat'] # b x t x vocab_size

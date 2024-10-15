@@ -68,8 +68,8 @@ class LangTokenVocab:
 
   def _get_sos_eos_token(self):
     if self.encoding_scheme == 'remi':
-      self.sos_token = [self.event2idx['SOS']]
-      self.eos_token = [[self.event2idx['EOS']]]
+      self.sos_token = [self.event2idx['SOS_None']]
+      self.eos_token = [[self.event2idx['EOS_None']]]
     else:
       self.sos_token = [[self.event2idx['type']['SOS']] + [0] * (self.num_features - 1)]
       self.eos_token = [[self.event2idx['type']['EOS']] + [0] * (self.num_features - 1)]
@@ -104,8 +104,8 @@ class LangTokenVocab:
     pitch_int = [int(x.replace('Note_Pitch_', '')) for x in pitch_vocab if x.replace('Note_Pitch_', '').isdigit()]
     min_pitch = min(pitch_int)
     max_pitch = max(pitch_int)
-    min_pitch_margin = max(min_pitch-11, 0)
-    max_pitch_margin = min(max_pitch+11, 127)
+    min_pitch_margin = max(min_pitch-6, 0)
+    max_pitch_margin = min(max_pitch+7, 127)
     new_pitch_vocab = sorted([f'Note_Pitch_{x}' for x in range(min_pitch_margin, max_pitch_margin+1)], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
     new_unique_vocab = [x for x in unique_vocabs if x not in new_pitch_vocab] + new_pitch_vocab
     return new_unique_vocab
@@ -141,7 +141,7 @@ class LangTokenVocab:
   def _make_mask(self):
     idx2feature = {}
     for idx, feature in self.idx2event.items():
-      if feature == 'EOS' or feature == 'SOS' or feature.startswith('Bar'):
+      if feature.startswith('SOS') or feature.startswith('EOS') or feature.startswith('Bar'):
         idx2feature[idx] = 'type'
       elif feature.startswith('Beat'):
         idx2feature[idx] = 'beat'
@@ -206,8 +206,8 @@ class MusicTokenVocabCP(LangTokenVocab):
     pitch_int = [int(x.replace('Note_Pitch_', '')) for x in pitch_vocab if x.replace('Note_Pitch_', '').isdigit()]
     min_pitch = min(pitch_int)
     max_pitch = max(pitch_int)
-    min_pitch_margin = max(min_pitch-11, 0)
-    max_pitch_margin = min(max_pitch+11, 127)
+    min_pitch_margin = max(min_pitch-6, 0)
+    max_pitch_margin = min(max_pitch+7, 127)
     new_pitch_vocab = [f'Note_Pitch_{x}' for x in range(min_pitch_margin, max_pitch_margin+1)]
     new_pitch_vocab = [x for x in pitch_total_vocab if str(x) not in new_pitch_vocab] + new_pitch_vocab
     unique_vocabs['pitch'] = new_pitch_vocab

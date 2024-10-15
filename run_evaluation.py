@@ -1,10 +1,10 @@
 import sys
 import torch
+from pathlib import Path
 
 from omegaconf import OmegaConf
-from nested_music_transformer.utils import wandb_style_config_to_omega_config, prepare_model_and_dataset_from_config, get_best_ckpt_path_and_config
-from pathlib import Path
-from nested_music_transformer.evaluation_utils import Evaluator
+
+from nested_music_transformer.evaluation_utils import Evaluator, wandb_style_config_to_omega_config, prepare_model_and_dataset_from_config, get_best_ckpt_path_and_config
 
 def main(exp_code):
   wandb_dir = Path('wandb')

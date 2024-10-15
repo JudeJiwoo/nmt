@@ -17,6 +17,7 @@ from nested_music_transformer.symbolic_encoding.data_utils import get_emb_total_
 from nested_music_transformer import model_zoo, trainer
 from nested_music_transformer.train_utils import SingleClassNLLLoss, MultiClassNLLLoss, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
 from nested_music_transformer.encodec.data_utils import EncodecDataset
+from data_representation import vocab_utils
 from run_evaluation import main as run_evaluation
 
 def ddp_setup(rank, world_size, backend='nccl'):
@@ -78,10 +79,22 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     in_vocab_file_path = vocab_dir / f'vocab_{dataset_name}_{encoding_scheme}{num_features}.json'
     out_vocab_path = Path(save_dir) / f'vocab_{dataset_name}_{encoding_scheme}{num_features}.json'
 
+    # get vocab
+    vocab_name = {'remi':'LangTokenVocab', 'cp':'MusicTokenVocabCP', 'nb':'MusicTokenVocabNB'}
+    selected_vocab_name = vocab_name[encoding_scheme]
+
+    vocab = getattr(vocab_utils, selected_vocab_name)(
+      in_vocab_file_path=in_vocab_file_path,
+      event_data=None,
+      encoding_scheme=encoding_scheme, 
+      num_features=num_features)
+    
+    if out_vocab_path is not None:
+      vocab.save_vocab(out_vocab_path)
+
     # Initialize symbolic dataset based on dataset name and configuration parameters
     symbolic_dataset = getattr(data_utils, dataset_name)(
-                                in_vocab_file_path=in_vocab_file_path,
-                                out_vocab_path=out_vocab_path,
+                                vocab=vocab,
                                 encoding_scheme=encoding_scheme,
                                 num_features=num_features,
                                 debug=config.general.debug,
@@ -90,7 +103,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
                                 first_pred_feature=config.data_params.first_pred_feature,
                                 )
 
-    # Update configuration based on the total embedding size
+    # Update configuration based on the designated embedding size in nn_params
     config = get_emb_total_size(config, symbolic_dataset.vocab)
 
     # Split dataset into training, validation, and test sets
@@ -317,7 +330,7 @@ def run_train_exp(rank, config, world_size:int=1):
     mean_nll = run_evaluation(exp_code)
     wandb.log({'evaluated_mean_nll': mean_nll})
 
-@hydra.main(version_base=None, config_path="./double_sequential/symbolic_yamls/", config_name="config")
+@hydra.main(version_base=None, config_path="./nested_music_transformer/symbolic_yamls/", config_name="config")
 def main(config: DictConfig):
   if config.use_ddp:
     world_size = torch.cuda.device_count()

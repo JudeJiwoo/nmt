@@ -18,13 +18,7 @@ from .model_zoo import DoubleSequentialTransformer
 from .symbolic_encoding.compile_utils import reverse_shift_and_pad_for_tensor
 from .symbolic_encoding.metric_utils import *
 from .symbolic_encoding import metric_utils
-from .utils import add_conti_in_valid
-
-# import sys
-# sys.path.append('/home/clay/userdata/symbolic-music-encoding/audiocraft')
-
-# from audiocraft.solvers import CompressionSolver
-
+from .evaluation_utils import add_conti_in_valid
 
 class LanguageModelTrainer:
   def __init__(

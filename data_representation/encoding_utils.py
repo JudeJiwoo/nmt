@@ -526,13 +526,14 @@ class Corpus2event_cp(Corpus2event_remi):
             t_tempos = song_data['tempos'].get(beat_step)
 
             # If a chord is present, extract its root, quality, and bass
-            if t_chords != None:
-              root, quality, bass = t_chords[-1].text.split('_')
-              chord_text = 'Chord_' + root + '_' + quality
+            if self.num_features == 8 or self.num_features == 7:
+              if t_chords is not None:
+                root, quality, _ = t_chords[-1].text.split('_')
+                chord_text = 'Chord_' + root + '_' + quality
 
-            # If a tempo is present, format it as a string
-            if t_tempos != None:
-              tempo_text = 'Tempo_' + str(t_tempos[-1].tempo)
+              # If a tempo is present, format it as a string
+              if t_tempos is not None:
+                tempo_text = 'Tempo_' + str(t_tempos[-1].tempo)
             
             # Dictionary to track notes for each instrument to avoid duplicates
             instrument_note_dict = defaultdict(dict)
@@ -703,13 +704,14 @@ class Corpus2event_nb(Corpus2event_cp):
             t_tempos = song_data['tempos'].get(beat_step)
 
             # If a chord is present, extract its root, quality, and bass
-            if t_chords != None:
-              root, quality, bass = t_chords[-1].text.split('_')
-              chord_text = 'Chord_' + root + '_' + quality
+            if self.num_features == 8 or self.num_features == 7:
+              if t_chords is not None:
+                root, quality, _ = t_chords[-1].text.split('_')
+                chord_text = 'Chord_' + root + '_' + quality
 
-            # If a tempo is present, format it as a string
-            if t_tempos != None:
-              tempo_text = 'Tempo_' + str(t_tempos[-1].tempo)
+              # If a tempo is present, format it as a string
+              if t_tempos is not None:
+                tempo_text = 'Tempo_' + str(t_tempos[-1].tempo)
 
             # Dictionary to track notes for each instrument to avoid duplicates
             instrument_note_dict = defaultdict(dict)
