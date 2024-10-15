@@ -12,11 +12,11 @@ import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
-from double_sequential.symbolic_encoding import data_utils, decoding_utils
-from double_sequential.symbolic_encoding.data_utils import get_emb_total_size
-from double_sequential import model_zoo, trainer
-from double_sequential.train_utils import SingleClassNLLLoss, MultiClassNLLLoss, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
-from double_sequential.encodec.data_utils import EncodecDataset
+from nested_music_transformer.symbolic_encoding import data_utils, decoding_utils
+from nested_music_transformer.symbolic_encoding.data_utils import get_emb_total_size
+from nested_music_transformer import model_zoo, trainer
+from nested_music_transformer.train_utils import SingleClassNLLLoss, MultiClassNLLLoss, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
+from nested_music_transformer.encodec.data_utils import EncodecDataset
 from run_evaluation import main as run_evaluation
 
 def ddp_setup(rank, world_size, backend='nccl'):
