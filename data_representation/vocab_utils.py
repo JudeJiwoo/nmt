@@ -187,7 +187,13 @@ class LangTokenVocab:
     return self.event2idx[f"{word['name']}_{word['value']}"]
 
 class MusicTokenVocabCP(LangTokenVocab):
-  def __init__(self, in_vocab_file_path, event_data, encoding_scheme, num_features):
+  def __init__(
+      self, 
+      in_vocab_file_path, 
+      event_data, 
+      encoding_scheme, 
+      num_features
+  ):
     super().__init__(in_vocab_file_path, event_data, encoding_scheme, num_features)
     '''
     this vocab considers the musical meaning of the tokens.

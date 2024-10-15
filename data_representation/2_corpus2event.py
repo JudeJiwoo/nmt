@@ -7,6 +7,10 @@ from tqdm import tqdm
 
 import encoding_utils
 
+'''
+This script is for converting corpus data to event data.
+'''
+
 class Corpus2Event():
   def __init__(
       self, 
@@ -31,7 +35,9 @@ class Corpus2Event():
 
   def make_events(self):
     '''
-    self.encoding_function will be changed according to the encoding_scheme 
+    Preprocess corpus data to events data.
+    The process in each encoding scheme is different.
+    Please refer to encoding_utils.py for more details.
     '''
     print("preprocessing corpus data to events data")
     # check output directory exists

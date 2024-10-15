@@ -3,6 +3,10 @@ from pathlib import Path
 
 import vocab_utils
 
+'''
+This script is for creating vocab file.
+'''
+
 def get_argument_parser():
   parser = argparse.ArgumentParser()
   parser.add_argument(

@@ -19,6 +19,11 @@ from chorder import Dechorder
 
 from constants import NUM2PITCH, PROGRAM_INSTRUMENT_MAP, INSTRUMENT_PROGRAM_MAP
 
+'''
+This script is designed to preprocess MIDI files and convert them into a structured corpus suitable for symbolic music analysis or model training. 
+It handles various tasks, including setting beat resolution, calculating duration, velocity, and tempo bins, and processing MIDI data into quantized musical events. 
+'''
+
 def get_tempo_bin(max_tempo:int, ratio:float=1.1):
   bpm = 30
   regular_tempo_bins = [bpm]
@@ -42,10 +47,22 @@ def split_markers(markers:List[miditoolkit.midi.containers.Marker]):
   return chords
 
 class CorpusMaker():
-  def __init__(self, dataset:str, num_features:int, in_dir:Path, out_dir:Path, debug:bool):
-    self.dataset = dataset
+  def __init__(
+      self, 
+      dataset_name:str, 
+      num_features:int, 
+      in_dir:Path, 
+      out_dir:Path, 
+      debug:bool
+  ):
+    '''
+    Initialize the CorpusMaker with dataset information and directory paths.
+    It sets up MIDI paths, output directories, and debug mode, then
+    retrieves the beat resolution, duration bins, velocity/tempo bins, and prepares the MIDI file list.
+    '''
+    self.dataset_name = dataset_name
     self.num_features = num_features
-    self.midi_path = in_dir / self.dataset
+    self.midi_path = in_dir / f"{dataset_name}"
     self.out_dir = out_dir
     self.debug = debug
     self._get_in_beat_resolution()
@@ -55,10 +72,12 @@ class CorpusMaker():
     self._prepare_midi_list()
   
   def _get_in_beat_resolution(self):
+    # Retrieve the resolution of quarter note based on the dataset name (e.g., 4 means the minimum resolution sets to 16th note)
     in_beat_resolution_dict = {'BachChorale': 4, 'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4, 'SymphonyMIDI': 8}
     self.in_beat_resolution = in_beat_resolution_dict[self.dataset]
 
   def _get_duration_bins(self):
+    # Set up regular duration bins for quantizing note lengths, based on the beat resolution.
     base_duration = {4:[1,2,3,4,5,6,8,10,12,16,20,24,28,32],
                      8:[1,2,3,4,6,8,10,12,14,16,20,24,28,32,36,40,48,56,64],
                      12:[1,2,3,4,6,9,12,15,18,24,30,36,42,48,54,60,72,84,96]}
@@ -66,17 +85,21 @@ class CorpusMaker():
     self.regular_duration_bins = np.array(base_duration_list)
 
   def _get_velocity_tempo_bins(self):
+    # Define velocity and tempo bins based on whether the dataset is a performance or score type.
     midi_type_dict = {'BachChorale': 'score', 'Pop1k7': 'perform', 'Pop909': 'score', 'SOD': 'score', 'LakhClean': 'score', 'Symphony': 'score'}
-    midi_type = midi_type_dict[self.dataset]
+    midi_type = midi_type_dict[self.dataset_name]
+    # For performance-type datasets, set finer granularity of velocity and tempo bins.
     if midi_type == 'perform':
-      self.regular_velocity_bins = np.array(list(range(40, 128, 8)) + [127]) # number of bins: 17
-      self.regular_tempo_bins = get_tempo_bin(max_tempo=240, ratio=1.04) # number of bins: 55
+      self.regular_velocity_bins = np.array(list(range(40, 128, 8)) + [127])
+      self.regular_tempo_bins = get_tempo_bin(max_tempo=240, ratio=1.04)
+    # For score-type datasets, use coarser velocity and tempo bins.
     elif midi_type == 'score':
       self.regular_velocity_bins = np.array([40, 60, 80, 100, 120])
-      self.regular_tempo_bins = get_tempo_bin(max_tempo=390, ratio=1.1) # number of bins: 15
+      self.regular_tempo_bins = get_tempo_bin(max_tempo=390, ratio=1.1)
 
   def _get_min_max_last_time(self):
     '''
+    Set the minimum and maximum allowed length of a MIDI track, depending on the dataset.
     0 to 2000 means no limitation
     '''
     last_time_dict = {'BachChorale': (0, 2000), 'Pop1k7': (0, 2000), 'Pop909': (0, 2000), 'SOD': (60, 1000), 'LakhClean': (60, 600), 'Symphony': (60, 1500)}
@@ -87,6 +110,10 @@ class CorpusMaker():
     self.midi_list = sorted(list(midi_path.rglob("*.midi")) + list(midi_path.rglob("*.mid")))
 
   def make_corpus(self) -> None:
+    '''
+    Main method to process the MIDI files and create the corpus data.
+    It supports both single-processing (debug mode) and multi-processing for large datasets.
+    '''
     print("preprocessing midi data to corpus data")
     # check the corpus folder is already exist and make it if not
     Path(self.out_dir).mkdir(parents=True, exist_ok=True)
@@ -104,6 +131,7 @@ class CorpusMaker():
         elif message == "success":
           success_counter += 1
     else:
+    # Multi-threaded processing for faster corpus generation.
       broken_counter = 0
       success_counter = 0
       with Pool(cpu_count()) as p:
@@ -115,12 +143,11 @@ class CorpusMaker():
     print(f"Making corpus takes: {time.time() - start_time}s, success: {success_counter}, broken: {broken_counter}")
 
   def _mp_midi2corpus(self, file_path:Path):
+    # Converts a single MIDI file to corpus format and saves both the corpus and MIDI.
     try:
-      # analyze: chords
       midi_obj = self._analyze(file_path)
-      # midi2corpus
       corpus, midi_obj = self._midi2corpus(midi_obj)
-      # Save the corpus directly in the worker process.
+      # Save corpus as a pickle file and the corresponding MIDI object.
       filename = file_path.stem + ".pkl"  # Get the stem (filename without extension) of the original file path
       save_path = Path(self.out_dir) / f"corpus_{self.dataset}" / filename  # Create a new Path object for saving
       with save_path.open('wb') as f:
@@ -141,13 +168,19 @@ class CorpusMaker():
       print(f"Error in {file_path.name}: {e}")
       return "error"
 
+  def _check_length(self, last_time:float):
+    if last_time < self.min_last_time or last_time > self.max_last_time:
+      raise ValueError(f"last time {last_time} is out of range")
+
   def _analyze(self, midi_path:Path):
-    # load
+    # Loads and analyzes a MIDI file, performing various checks and extracting chords.
     midi_obj = miditoolkit.midi.parser.MidiFile(midi_path)
+    
     # check length
     mapping = midi_obj.get_tick_to_time_mapping()
     last_time = mapping[midi_obj.max_tick]
     self._check_length(last_time)
+    
     for ins in midi_obj.instruments:
       # delete instrument with no notes
       if len(ins.notes) == 0:
@@ -155,15 +188,15 @@ class CorpusMaker():
         continue
       notes = ins.notes
       notes = sorted(notes, key=lambda x: (x.start, x.pitch))
-    # self._check_irregular_tempo(midi_obj)
+
+    # three steps to merge instruments
     self._merge_percussion(midi_obj)
-    self._merge_instruments(midi_obj)
+    self._pruning_instrument(midi_obj)
     self._limit_max_track(midi_obj)
 
     if self.num_features == 7 or self.num_features == 8:
-      # --- chord --- #
+      # in case of 7 or 8 features, we need to extract chords
       new_midi_obj = self._pruning_notes_for_chord_extraction(midi_obj)
-      # exctract chord
       chords = Dechorder.dechord(new_midi_obj)
       markers = []
       for cidx, chord in enumerate(chords):
@@ -185,24 +218,76 @@ class CorpusMaker():
       midi_obj.markers = dedup_chords
     return midi_obj
 
+  def _pruning_grouped_notes_from_quantization(self, instr_grid:dict):
+    '''
+    In case where notes are grouped in the same quant_time but with different start time, unintentional chords are created
+    rule1: if notes have half step interval, delete the shorter one
+    rule2: if notes do not share 50% of duration of the shorter note, delete the shorter one
+    '''
+    for instr in instr_grid.keys():
+      time_list = sorted(list(instr_grid[instr].keys()))
+      for time in time_list:
+        notes = instr_grid[instr][time]
+        if len(notes) == 1:
+          continue
+        else:
+          new_notes = []
+        # sort in pitch with ascending order
+        notes.sort(key=lambda x: x.pitch)
+        for i in range(len(notes)-1):
+          # if start time is same add to new_notes
+          if notes[i].start == notes[i+1].start:
+            new_notes.append(notes[i])
+            new_notes.append(notes[i+1])
+            continue
+          if notes[i].pitch == notes[i+1].pitch or notes[i].pitch + 1 == notes[i+1].pitch:
+            # select longer note
+            if notes[i].end - notes[i].start > notes[i+1].end - notes[i+1].start:
+              new_notes.append(notes[i])
+            else:
+              new_notes.append(notes[i+1])
+          else:
+            # check how much duration they share
+            shared_duration = min(notes[i].end, notes[i+1].end) - max(notes[i].start, notes[i+1].start)
+            shorter_duration = min(notes[i].end - notes[i].start, notes[i+1].end - notes[i+1].start)
+            # unless they share more than 80% of duration, select longer note (pruning shorter note)
+            if shared_duration / shorter_duration < 0.8:
+              if notes[i].end - notes[i].start > notes[i+1].end - notes[i+1].start:
+                new_notes.append(notes[i])
+              else:
+                new_notes.append(notes[i+1])
+            else:
+              if len(new_notes) == 0:
+                new_notes.append(notes[i])
+                new_notes.append(notes[i+1])
+              else:
+                new_notes.append(notes[i+1])
+        instr_grid[instr][time] = new_notes
+
   def _midi2corpus(self, midi_obj:miditoolkit.midi.parser.MidiFile):
-    '''
-    quantizing notes into designated resolution(in REMI and CP it was fixed as 4)
-    '''
-    # --- set resolution --- #
+    # Checks if the ticks per beat in the MIDI file is lower than the expected resolution.
+    # If it is, raise an error.
     if midi_obj.ticks_per_beat < self.in_beat_resolution:
       raise ValueError(f'[x] Irregular ticks_per_beat. {midi_obj.ticks_per_beat}')
+
+    # Ensure there is at least one time signature change in the MIDI file.
     if len(midi_obj.time_signature_changes) == 0:
       raise ValueError('[x] No time_signature_changes')
-    # time signature time duplication check
+    
+    # Ensure there are no duplicated time signature changes.
     time_list = [ts.time for ts in midi_obj.time_signature_changes]
     if len(time_list) != len(set(time_list)):
       raise ValueError('[x] Duplicated time_signature_changes')
+    
+    # If the dataset is 'LakhClean' or 'SymphonyMIDI', verify there are at least 4 tracks.
     if self.dataset == 'LakhClean' or self.dataset == 'SymphonyMIDI':
       if len(midi_obj.instruments) < 4:
         raise ValueError('[x] We will use more than 4 tracks in Lakh Clean dataset.')
-    # in_beat_tick_resol = midi_obj.ticks_per_beat // self.in_beat_resolution
+    
+    # Calculate the resolution of ticks per beat as a fraction.
     in_beat_tick_resol = Fraction(midi_obj.ticks_per_beat, self.in_beat_resolution)
+    
+    # Extract the initial time signature (numerator and denominator) and calculate the number of ticks for the first bar.
     initial_numerator = midi_obj.time_signature_changes[0].numerator
     initial_denominator = midi_obj.time_signature_changes[0].denominator
     first_bar_resol = int(midi_obj.ticks_per_beat * initial_numerator * (4 / initial_denominator))
@@ -213,7 +298,6 @@ class CorpusMaker():
     # --- load information --- #
     # load chords, labels
     chords = split_markers(midi_obj.markers)
-    # chords = [marker for marker in midi_obj.markers if check_marker_validity(marker)]
     chords.sort(key=lambda x: x.time)
 
     # load tempos
@@ -251,6 +335,7 @@ class CorpusMaker():
           continue
         if relative_duration > self.in_beat_resolution * 8: # 8 beats
           relative_duration = self.in_beat_resolution * 8
+          
         # use regular duration bins
         note.quantized_duration = self.regular_duration_bins[np.argmin(abs(self.regular_duration_bins-relative_duration))]
 
@@ -267,6 +352,9 @@ class CorpusMaker():
       # set to track
       instr_grid[key] = note_grid
     
+    # --- pruning grouped notes --- #
+    self._pruning_grouped_notes_from_quantization(instr_grid)
+  
     # --- process chords --- #
     chord_grid = defaultdict(list)
     for chord in chords:
@@ -274,7 +362,6 @@ class CorpusMaker():
       chord.time = chord.time - offset_by_resol
       chord.time  = 0 if chord.time < 0 else chord.time
       quant_time = int(round(chord.time / in_beat_tick_resol)) * in_beat_tick_resol
-      # append
       chord_grid[quant_time].append(chord)
 
     # --- process tempos --- #
@@ -300,7 +387,6 @@ class CorpusMaker():
       tempo_grid[quant_first_note_time] = [tempo_grid[quant_first_note_time][-1]]
     
     # --- process time signature --- #
-    # deepcopy
     quant_time_signature = deepcopy(midi_obj.time_signature_changes)
     quant_time_signature.sort(key=lambda x: x.time)
     for ts in quant_time_signature:
@@ -334,7 +420,14 @@ class CorpusMaker():
     return song_data, new_midi_obj
 
   def _make_instr_notes(self, midi_obj):
-    # load notes
+    '''
+    This part is important, we can use three different ways to merge instruments
+    1st option: compare the number of notes and choose tracks with more notes
+    2nd option: merge all instruments with the same tracks
+    3rd option: leave all instruments as they are. differentiate tracks with different track number
+    
+    In this version we choose to use the 2nd option as it helps to reduce the number of tracks and sequence length
+    '''
     instr_notes = defaultdict(list)
     for instr in midi_obj.instruments:
       instr_idx = instr.program
@@ -343,23 +436,15 @@ class CorpusMaker():
       if instr_name is None:
         continue
       new_instr_idx = INSTRUMENT_PROGRAM_MAP[instr_name]
-      # 1st option: compare numbers of notes and choose the one with more notes
-      # if instr_notes.get(new_instr_idx) is None:
-      #   instr_notes[new_instr_idx].extend(instr.notes)
-      # else: 
-      #   if len(instr_notes[new_instr_idx]) < len(instr.notes):
-      #     instr_notes[new_instr_idx] = instr.notes
-      # 2nd option: merge all instruments with same program
       instr_notes[new_instr_idx].extend(instr.notes)
       instr_notes[new_instr_idx].sort(key=lambda x: (x.start, -x.pitch))
     return instr_notes
 
-  def _check_length(self, last_time:float):
-    if last_time < self.min_last_time or last_time > self.max_last_time:
-      raise ValueError(f"last time {last_time} is out of range")
-
-  # refered from SymphonyNet(https://github.com/symphonynet/SymphonyNet)
+  # refered to SymphonyNet "https://github.com/symphonynet/SymphonyNet"
   def _merge_percussion(self, midi_obj:miditoolkit.midi.parser.MidiFile):
+    '''
+    merge drum track to one track
+    '''
     drum_0_lst = []
     new_instruments = []
     for instrument in midi_obj.instruments:
@@ -378,9 +463,11 @@ class CorpusMaker():
       new_instruments.append(drum_0_instrument)
     midi_obj.instruments = new_instruments
 
-  def _merge_instruments(self, midi_obj:miditoolkit.midi.parser.MidiFile):
+  # referred to mmt "https://github.com/salu133445/mmt"
+  def _pruning_instrument(self, midi_obj:miditoolkit.midi.parser.MidiFile):
     '''
-    merge similar instruments
+    merge instrument number with similar intrument category
+    ex. 0: Acoustic Grand Piano, 1: Bright Acoustic Piano, 2: Electric Grand Piano into 0: Acoustic Grand Piano
     '''
     new_instruments = []
     for instr in midi_obj.instruments:
@@ -391,7 +478,7 @@ class CorpusMaker():
         new_instruments.append(instr)
     midi_obj.instruments = new_instruments
 
-  # refered from SymphonyNet(https://github.com/symphonynet/SymphonyNet)
+  # refered to SymphonyNet "https://github.com/symphonynet/SymphonyNet"
   def _limit_max_track(self, midi_obj:miditoolkit.midi.parser.MidiFile, MAX_TRACK:int=16):
       '''
       merge track with least notes to other track with same program
@@ -422,9 +509,9 @@ class CorpusMaker():
                       merged = True
                       break
               if not merged:
-                  pass  # print('Track {:d} deprecated, program {:d}, note count {:d}'.format(id, cur_ins.program, len(cur_ins.notes)))
+                  pass
           good_instruments = new_good_instruments
-          # print(trks, probs, chosen)
+
       assert len(good_instruments) <= MAX_TRACK, len(good_instruments)
       for idx, good_instrument in enumerate(good_instruments):
           if good_instrument.is_drum:
@@ -433,6 +520,9 @@ class CorpusMaker():
       midi_obj.instruments = good_instruments
 
   def _pruning_notes_for_chord_extraction(self, midi_obj:miditoolkit.midi.parser.MidiFile):
+    '''
+    extract notes for chord extraction
+    '''
     new_midi_obj = miditoolkit.midi.parser.MidiFile()
     new_midi_obj.ticks_per_beat = midi_obj.ticks_per_beat
     new_midi_obj.max_tick = midi_obj.max_tick
