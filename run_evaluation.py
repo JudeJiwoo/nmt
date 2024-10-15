@@ -25,14 +25,11 @@ def main(exp_code):
   mean_by_class = {}
   
   for key in evaluator.vocab.feature_list:
-    # skip type
+    # skip type for calculating mean as type or metric token have different meanings across encoding schemes
     if key == 'type':
       continue
     mean_nll = sum(evaluator.loss_by_class[key]) / evaluator.count_by_class[key]
     mean_by_class[key] = mean_nll
-
-  # calculate macro average
-  # total_mean_nll = sum(mean_by_class.values()) / len(mean_by_class)
     
   # calculate micro average
   total_mean_nll = 0
