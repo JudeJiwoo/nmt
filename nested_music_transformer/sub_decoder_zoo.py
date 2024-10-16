@@ -7,16 +7,18 @@ from .transformer_utils import MultiEmbedding, RVQMultiEmbedding
 from .sub_decoder_utils import *
 from .sampling_utils import sample
 
+from data_representation.vocab_utils import LangTokenVocab
+
 class SingleProjection(nn.Module):
   def __init__(
-      self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout, 
-      sub_decoder_enricher_use
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     '''
     This sub-decoder is used for REMI based models
@@ -39,14 +41,14 @@ class SingleProjection(nn.Module):
 
 class SubDecoderClass(nn.Module):
   def __init__(
-      self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__()
     '''
@@ -78,39 +80,17 @@ class SubDecoderClass(nn.Module):
 
   def _make_nonlinear_layer(self):
     pass
-
-  def _seq_sampling(self, prob, target, feature):
-    if target is None:
-      if self.config.inference_params.sampling_method == 'multinomial':
-        feature_token = torch.multinomial(prob[:, -1, :], num_samples=1)
-    else: # training
-      feature_idx = self.config.nn_params.input_keys.index(feature) # TODO: make it faster
-      feature_token = target[..., feature_idx] # B x T
-    return feature_token
-  
-  def _parallel_sampling(self, prob_dict, target, feature):
-    feature_token_dict = {}
-    if target is None:
-      for key in feature:
-        feature_token = torch.multinomial(prob_dict[key][:, -1, :], num_samples=1)
-        feature_token_dict[key] = feature_token
-    else: # training
-      for key in feature:
-        feature_idx = self.config.nn_params.input_keys.index(key)
-        feature_token = target[..., feature_idx]
-        feature_token_dict[key] = feature_token
-    return feature_token_dict
   
 class FeedForward(SubDecoderClass):
   def __init__(
       self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
@@ -167,13 +147,13 @@ class FeedForward(SubDecoderClass):
 class Parallel(SubDecoderClass):
   def __init__(
       self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
@@ -201,13 +181,13 @@ class Parallel(SubDecoderClass):
 class RNN(SubDecoderClass):
   def __init__(
       self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
@@ -289,13 +269,13 @@ class RNN(SubDecoderClass):
 class SelfAttention(SubDecoderClass):
   def __init__(
       self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
@@ -416,8 +396,8 @@ class SelfAttention(SubDecoderClass):
       logit = logit.reshape((hidden_vec.shape[0], hidden_vec.shape[1], -1)) # B x T x vocab_size
       logits_dict[feature] = logit
     return logits_dict
-    
-class CrossAttention(SubDecoderClass):
+
+class SelfAttentionUniAudio(SelfAttention):
   def __init__(
       self, 
       prediction_order, 
@@ -427,6 +407,79 @@ class CrossAttention(SubDecoderClass):
       heads, 
       dropout,
       sub_decoder_enricher_use
+  ):
+    super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
+    '''
+    Uniaudio version of self-attention sub-decoder
+    '''
+
+  def _prepare_token_embedding_for_teacher_forcing(self, hidden_vec_reshape, target):
+    input_seq_list = []
+    # append zero vector
+    input_seq_list.append(torch.zeros(hidden_vec_reshape.shape[0], 1, hidden_vec_reshape.shape[2]).to(self.device))
+    for feature in self.prediction_order[:-1]:
+      feature_idx = self.vocab.feature_list.index(feature)
+      feature_emb = self.emb_layer.get_emb_by_key(feature, target[..., feature_idx]) # B x T x emb_size
+      feature_emb_reshape = feature_emb.reshape((feature_emb.shape[0]*feature_emb.shape[1], 1, -1)) # (B*T) x 1 x emb_size
+      input_seq_list.append(feature_emb_reshape)
+
+    feature_tensor = torch.cat(input_seq_list, dim=1) # (B*T) x num_sub-tokens x d_model
+    # Ensure hidden_vec_reshape and feature_tensor have the same shape
+    assert hidden_vec_reshape.shape == feature_tensor.shape, f"Shapes of hidden_vec_reshape and feature_tensor do not match: {hidden_vec_reshape.shape} vs {feature_tensor.shape}"
+    # Sum hidden_vec_reshape and feature_tensor in the last dimension
+    memory_tensor = hidden_vec_reshape + feature_tensor
+    return memory_tensor
+  
+  def forward(self, input_dict, sampling_method=None, threshold=None, temperature=None):
+    logits_dict = {}
+    hidden_vec = input_dict['hidden_vec'] # B x T x d_model
+    target = input_dict['target'] # B x T x num_sub-tokens
+    hidden_vec_reshape = hidden_vec.reshape((hidden_vec.shape[0]*hidden_vec.shape[1], 1, -1)) # (B*T) x 1 x d_model
+    hidden_vec_reshape = hidden_vec_reshape.repeat(1, len(self.prediction_order), 1) # (B*T) x num_sub-tokens x d_model
+    
+    # ---- Generate(Inference) ---- #
+    if target is None:
+      sampled_token_dict = {}
+      # input_seq_tensor = torch.cat(input_seq_list, dim=1) # (B*T) x (window_size + BOS) x d_model
+      pos_target_tensor = self._apply_pos_enc(hidden_vec_reshape, apply_type='all') # (B*T) x (window_size + BOS) x d_model
+      # pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS) x d_model
+      for idx, feature in enumerate(self.prediction_order):
+        output = self.transformer_decoder(pos_target_tensor)
+        logit = self.hidden2logit[f"layer_{feature}"](output[:, -1:])
+        logits_dict[feature] = logit.reshape((1, 1, -1)) # 1 x 1 x vocab_size
+        sampled_token = sample(logit, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
+        sampled_token_dict[feature] = sampled_token
+        if idx == len(self.prediction_order)-1:
+          return logits_dict, sampled_token_dict
+        feature_emb = self.emb_layer.get_emb_by_key(feature, sampled_token)
+        feature_emb_reshape = feature_emb.reshape((1, 1, -1)) # (B*T) x 1 x emb_size
+        pos_target_tensor = torch.cat([pos_target_tensor[:, :idx+1, :], feature_emb_reshape + pos_target_tensor[:, idx+1:idx+2, :], pos_target_tensor[:, idx+2:, :]], dim=1)
+
+      return logits_dict, sampled_token_dict
+    
+    # ---- Training ---- #
+    # preparing for training
+    input_seq_tensor = self._prepare_token_embedding_for_teacher_forcing(hidden_vec_reshape, target) # (B*T) x (window_size + BOS + num_features-1) x d_model
+    pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS + num_features-1) x d_model
+    # get output using self-attention
+    output = self.transformer_decoder(pos_target_tensor)
+    for idx, feature in enumerate(self.prediction_order):
+      feature_pos = self.feature_order_in_output[feature]
+      logit = self.hidden2logit[f"layer_{feature}"](output[:, feature_pos, :])
+      logit = logit.reshape((hidden_vec.shape[0], hidden_vec.shape[1], -1)) # B x T x vocab_size
+      logits_dict[feature] = logit
+    return logits_dict
+
+class CrossAttention(SubDecoderClass):
+  def __init__(
+      self, 
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.sub_decoder_enricher_use = sub_decoder_enricher_use
@@ -544,13 +597,13 @@ class CrossAttention(SubDecoderClass):
 class Flatten4Encodec(SubDecoderClass):
   def __init__(
       self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+      prediction_order:list, 
+      vocab:LangTokenVocab, 
+      sub_decoder_depth:int, 
+      dim:int, 
+      heads:int, 
+      dropout:float, 
+      sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 

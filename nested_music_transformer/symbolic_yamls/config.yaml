@@ -1,5 +1,5 @@
 defaults:
-  - nn_params: nb5_embSum_decCrossAttention
+  - nn_params: nb5_embSum_subCrossAttention
 
 # Pop1k7, Pop909, LakhClean, SOD, BachChorale
 dataset: SOD

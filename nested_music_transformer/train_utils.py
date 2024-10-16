@@ -21,7 +21,7 @@ def add_conti_for_single_feature(tensor):
 
 ########################### Loss function ################################
 
-class SingleClassNLLLoss():
+class NLLLoss4REMI():
   def __init__(
       self, 
       focal_alpha:float,
@@ -60,7 +60,7 @@ class SingleClassNLLLoss():
       loss, loss_seq = self.get_nll_loss(logits, shifted_tgt, mask)
       return loss, None
     
-class MultiClassNLLLoss():
+class NLLLoss4CompoundToken():
   def __init__(self, feature_list, focal_alpha:float, focal_gamma:float):
     self.feature_list = feature_list
     self.alpha = focal_alpha

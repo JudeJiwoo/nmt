@@ -4,24 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# from x-transformers
-def exists(val):
-    return val is not None
-
-def default(val, d):
-    return val if exists(val) else d
-
-def top_k(logits, frac_num_tokens = 0.1, k = None):
-    num_tokens = logits.shape[-1]
-
-    k = default(k, ceil(frac_num_tokens * num_tokens))
-    k = min(k, num_tokens)
-
-    val, ind = torch.topk(logits, k)
-    probs = torch.full_like(logits, float('-inf'))
-    probs.scatter_(1, ind, val)
-    return probs
-
 class MLP(nn.Module):
   def __init__(self, in_size, out_size, hidden_size, dropout):
     super().__init__()

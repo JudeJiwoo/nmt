@@ -79,18 +79,18 @@ class LangTokenVocab:
     if event_data is not None:
       unique_char_list = list(set([f'{event["name"]}_{event["value"]}' for tune_path in event_data for event in pickle.load(open(tune_path, 'rb'))]))
       unique_vocabs = sorted(unique_char_list)
-      unique_vocabs.remove('Bar_None')
       unique_vocabs.remove('SOS_None')
       unique_vocabs.remove('EOS_None')
+      unique_vocabs.remove('Bar_None')
       new_unique_vocab = self._augment_pitch_vocab(unique_vocabs)
       if self.num_features == 5 or self.num_features == 8:
         new_unique_vocab = self._arange_instrument_vocab(new_unique_vocab)
       if self.num_features == 7 or self.num_features == 8:
         new_unique_vocab = self._arange_chord_vocab(new_unique_vocab)
       new_unique_vocab = self._arange_beat_vocab(new_unique_vocab)
-      new_unique_vocab.insert(0, 'Bar_None')
-      new_unique_vocab.insert(1, 'SOS_None')
-      new_unique_vocab.insert(2, 'EOS_None')
+      new_unique_vocab.insert(0, 'SOS_None')
+      new_unique_vocab.insert(1, 'EOS_None')
+      new_unique_vocab.insert(2, 'Bar_None')
       idx2event = {int(idx) : tok for idx, tok in enumerate(new_unique_vocab)}
       event2idx = {tok : int(idx) for idx, tok in idx2event.items()}
     # load premade vocab

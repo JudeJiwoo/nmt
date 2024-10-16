@@ -31,14 +31,16 @@ class TuneCompiler():
       data:List[Tuple[np.ndarray, str]], 
       data_type:str, 
       augmentor:Augmentor, 
-      vocab,
+      vocab:vocab_utils.LangTokenVocab,
       input_length:int,
       first_pred_feature:str
   ):
     '''
-    if augmentor is None, it means that it is test dataset
-    data_list has either list of tune_in_idx or list of (tune_in_idx, replaced_tune_in_idx)
+    The data is distributed on-the-fly by the TuneCompiler
+    Pitch, Chord augementation is applied to the training data every iteration
+    Segmentation is applied every epoch for the training data
     '''
+
     self.data_list = data
     self.data_type = data_type
     self.augmentor = augmentor
@@ -51,6 +53,7 @@ class TuneCompiler():
       first_pred_feature=first_pred_feature,
       encoding_scheme=vocab.encoding_scheme
     )
+
     if self.data_type == 'valid' or self.data_type == 'test':
       self._update_segments_for_validset()
     else:
@@ -61,8 +64,8 @@ class TuneCompiler():
     self.segments, _, self.segment2tune_name = self.compile_function.make_segments(self.data_type)
     print(f"number of trainset segments: {len(self.segments)}")
 
-  def _update_segments_for_validset(self):
-    random.seed(0)
+  def _update_segments_for_validset(self, random_seed=0):
+    random.seed(random_seed)
     self.segments, self.tune_name2segment, self.segment2tune_name = self.compile_function.make_segments(self.data_type)
     print(f"number of testset segments: {len(self.segments)}")
 
@@ -77,7 +80,7 @@ class TuneCompiler():
   
   def get_segments_with_tune_idx(self, tune_name, seg_order):
     '''
-    for testset with conditional generation
+    This function is used to retrieve the segment with the tune name and segment order during the validation
     '''
     segments_list = self.tune_name2segment[tune_name]
     segment_idx = segments_list[seg_order]

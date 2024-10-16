@@ -15,7 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from nested_music_transformer.symbolic_encoding import data_utils, decoding_utils
 from nested_music_transformer.symbolic_encoding.data_utils import get_emb_total_size
 from nested_music_transformer import model_zoo, trainer
-from nested_music_transformer.train_utils import SingleClassNLLLoss, MultiClassNLLLoss, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
+from nested_music_transformer.train_utils import NLLLoss4REMI, NLLLoss4CompoundToken, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
 from nested_music_transformer.encodec.data_utils import EncodecDataset
 from data_representation import vocab_utils
 from run_evaluation import main as run_evaluation
@@ -141,9 +141,9 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     focal_alpha = config.train_params.focal_alpha
     focal_gamma = config.train_params.focal_gamma
     if encoding_scheme == 'remi':
-        loss_fn = SingleClassNLLLoss(focal_alpha=focal_alpha, focal_gamma=focal_gamma)
+        loss_fn = NLLLoss4REMI(focal_alpha=focal_alpha, focal_gamma=focal_gamma)
     elif encoding_scheme in ['cp', 'nb']:
-        loss_fn = MultiClassNLLLoss(feature_list=symbolic_dataset.vocab.feature_list, focal_alpha=focal_alpha, focal_gamma=focal_gamma)
+        loss_fn = NLLLoss4CompoundToken(feature_list=symbolic_dataset.vocab.feature_list, focal_alpha=focal_alpha, focal_gamma=focal_gamma)
 
     # Set optimizer and learning rate scheduler based on the configuration
     optimizer = torch.optim.AdamW(nested_music_transformer.parameters(), lr=config.train_params.initial_lr, betas=(0.9, 0.95), eps=1e-08, weight_decay=0.01)
@@ -162,7 +162,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     midi_decoder = getattr(decoding_utils, midi_decoder_dict[encoding_scheme])(vocab=symbolic_dataset.vocab, in_beat_resolution=in_beat_resolution, dataset_name=dataset_name)
 
     # Select trainer class based on encoding scheme
-    trainer_option_dict = {'remi': 'SingleClassLMTrainer', 'cp': 'MultiClassLMTrainer', 'nb':'MultiClassLMTrainer'}
+    trainer_option_dict = {'remi': 'LanguageModelTrainer4REMI', 'cp': 'LanguageModelTrainer4CompoundToken', 'nb':'LanguageModelTrainer4CompoundToken'}
     trainer_option = trainer_option_dict[encoding_scheme]
     sampling_method = None
     sampling_threshold = 0.99
