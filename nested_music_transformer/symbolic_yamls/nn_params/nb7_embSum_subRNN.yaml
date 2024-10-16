@@ -1,8 +1,8 @@
 vocab_name: MusicTokenVocabNB
-model_name: DoubleSequentialTransformer
+model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: Parallel_Strategy
+sub_decoder_name: RNN
 input_embedder:
   num_layer: 1
   num_head: 8
@@ -39,7 +39,7 @@ decoding_complexity_layer:
   dropout: 0.3 
 
 # sequential prediction pitch 1st
-# prediction_order: ['pitch', 'duration', 'velocity', 'type', 'beat', 'chord', 'tempo']
+prediction_order: ['pitch', 'duration', 'velocity', 'type', 'beat', 'chord', 'tempo']
 
 # sequential prediction type 1st
-prediction_order: ['type', 'beat', 'chord', 'tempo', 'pitch', 'duration', 'velocity']
+# prediction_order: ['type', 'beat', 'chord', 'tempo', 'instrument', 'pitch', 'duration', 'velocity']

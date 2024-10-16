@@ -7,8 +7,20 @@ from .transformer_utils import MultiEmbedding, RVQMultiEmbedding
 from .sub_decoder_utils import *
 from .sampling_utils import sample
 
-class SingleProjectionStrategy(nn.Module):
-  def __init__(self, prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use):
+class SingleProjection(nn.Module):
+  def __init__(
+      self, 
+      prediction_order, 
+      vocab, 
+      sub_decoder_depth, 
+      dim, 
+      heads, 
+      dropout, 
+      sub_decoder_enricher_use
+  ):
+    '''
+    This sub-decoder is used for REMI based models
+    '''
     super().__init__()
     vocab_size = vocab.get_vocab_size()
     self.proj = nn.Linear(dim, vocab_size)
@@ -25,7 +37,7 @@ class SingleProjectionStrategy(nn.Module):
     logits = self.proj(hidden_vec)
     return logits
 
-class PredictionStrategy(nn.Module):
+class SubDecoderClass(nn.Module):
   def __init__(
       self, 
       prediction_order, 
@@ -38,8 +50,7 @@ class PredictionStrategy(nn.Module):
   ):
     super().__init__()
     '''
-    self.prediction_order: list of token types to be predicted in order,
-    token types can be str(in case of sequential prediction) or a list(in case of parallel prediction)
+    This is the base class for all sub-decoders
     '''
     self.prediction_order = prediction_order
     self.vocab = vocab
@@ -90,7 +101,7 @@ class PredictionStrategy(nn.Module):
         feature_token_dict[key] = feature_token
     return feature_token_dict
   
-class CatVec_Strategy(PredictionStrategy):
+class FeedForward(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 
@@ -153,7 +164,7 @@ class CatVec_Strategy(PredictionStrategy):
           logits_dict[par_feature] = logit
     return logits_dict
 
-class Parallel_Strategy(PredictionStrategy):
+class Parallel(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 
@@ -187,7 +198,7 @@ class Parallel_Strategy(PredictionStrategy):
       logits_dict[feature] = logit
     return logits_dict
 
-class RNN_Strategy(PredictionStrategy):
+class RNN(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 
@@ -275,7 +286,7 @@ class RNN_Strategy(PredictionStrategy):
       logits_dict[feature] = logit
     return logits_dict
 
-class SelfAttention_Strategy(PredictionStrategy):
+class SelfAttention(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 
@@ -406,7 +417,7 @@ class SelfAttention_Strategy(PredictionStrategy):
       logits_dict[feature] = logit
     return logits_dict
     
-class CrossAttention_Strategy(PredictionStrategy):
+class CrossAttention(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 
@@ -530,7 +541,7 @@ class CrossAttention_Strategy(PredictionStrategy):
       logits_dict[feature] = logit
     return logits_dict
 
-class Flatten_Strategy(PredictionStrategy):
+class Flatten4Encodec(SubDecoderClass):
   def __init__(
       self, 
       prediction_order, 

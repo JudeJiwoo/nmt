@@ -1,14 +1,13 @@
-vocab_name: MusicTokenVocabNB
-model_name: DoubleSequentialTransformer
+vocab_name: MusicTokenVocabCP
+model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: RNN_Strategy
+sub_decoder_name: FeedForward
 input_embedder:
   num_layer: 1
   num_head: 8
   dropout: 0.1
 main_decoder:
-  input_length: 1024
   dim_model: 512
   num_layer: 6
   num_head: 8
@@ -27,19 +26,9 @@ emb:
   pitch: 1 # cp 512
   duration: 0.25 # cp 128
   velocity: 0.25 # cp 128
-emb_mlp_layer:
-  use: False
-  num_layer: 2
-  hidden_size: 2048
-  dropout: 0.1 
-decoding_complexity_layer:
-  name: null # "None", "relu", "MLP", "multiMLP", "residualMLP"
-  num_layers: 2
-  hidden_size: 2048
-  dropout: 0.3 
 
-# sequential prediction pitch 1st
-prediction_order: ['pitch', 'duration', 'velocity', 'type', 'beat', 'chord', 'tempo']
+# cp original catvec style
+prediction_order: ['type', ['beat', 'chord', 'tempo', 'pitch', 'duration', 'velocity']]
 
 # sequential prediction type 1st
-# prediction_order: ['type', 'beat', 'chord', 'tempo', 'instrument', 'pitch', 'duration', 'velocity']
+# prediction_order: ['type', 'beat', 'chord', 'tempo', 'pitch', 'duration', 'velocity']

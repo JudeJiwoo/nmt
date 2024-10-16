@@ -1,8 +1,8 @@
 vocab_name: MusicTokenVocabNB
-model_name: DoubleSequentialTransformer
-input_embedder_name: SummationEmbedder
+model_name: NestedMusicTransformer
+input_embedder_name: SelfAttentionEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: Parallel_Strategy
+sub_decoder_name: CrossAttention
 input_embedder:
   num_layer: 1
   num_head: 8

@@ -1,8 +1,8 @@
 vocab_name: LangTokenVocab
-model_name: DoubleSequentialTransformer
+model_name: NestedMusicTransformer
 input_embedder_name: SingleEmbedding
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: SingleProjectionStrategy
+sub_decoder_name: SingleProjection
 main_decoder:
   input_length: 8192 # <<<<<<-------
   dim_model: 512 # <<<<<<-------

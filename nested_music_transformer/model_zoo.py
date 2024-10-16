@@ -7,7 +7,7 @@ from . import transformer_utils
 from . import sub_decoder_zoo
 from x_transformers.x_transformers import LayerIntermediates, AbsolutePositionalEmbedding
 
-class DoubleSequentialTransformerWrapper(nn.Module):
+class NestedMusicTransformerWrapper(nn.Module):
   def __init__(
       self, 
       *, 
@@ -76,8 +76,8 @@ class DoubleSequentialTransformerWrapper(nn.Module):
     logits = self.sub_decoder(input_dict)
     return logits
 
-class DoubleSequentialAutoregressiveWrapper(nn.Module):
-  def __init__(self, net:DoubleSequentialTransformerWrapper):
+class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
+  def __init__(self, net:NestedMusicTransformerWrapper):
     super().__init__()
     self.net = net
 
@@ -147,7 +147,7 @@ class DoubleSequentialAutoregressiveWrapper(nn.Module):
         break
     return total_out
 
-class DoubleSequentialTransformer(nn.Module):
+class NestedMusicTransformer(nn.Module):
   def __init__(
       self, 
       vocab, 
@@ -164,7 +164,7 @@ class DoubleSequentialTransformer(nn.Module):
       dropout
   ):
     super().__init__()
-    decoder = DoubleSequentialTransformerWrapper(
+    decoder = NestedMusicTransformerWrapper(
       vocab=vocab,
       input_length=input_length,
       prediction_order=prediction_order,
@@ -178,7 +178,7 @@ class DoubleSequentialTransformer(nn.Module):
       depth=depth,
       dropout=dropout
     )
-    self.decoder = DoubleSequentialAutoregressiveWrapper(
+    self.decoder = NestedMusicTransformerAutoregressiveWrapper(
       net=decoder
     )
   
@@ -189,7 +189,7 @@ class DoubleSequentialTransformer(nn.Module):
   def generate(self, manual_seed, max_seq_len, condition=None, sampling_method=None, threshold=None, temperature=1):
     return self.decoder.generate(manual_seed, max_seq_len, condition, sampling_method, threshold, temperature)
 
-class EncodecDoubleSeqTransformer(DoubleSequentialTransformer):
+class EncodecDoubleSeqTransformer(NestedMusicTransformer):
   def __init__(
       self, 
       vocab, 

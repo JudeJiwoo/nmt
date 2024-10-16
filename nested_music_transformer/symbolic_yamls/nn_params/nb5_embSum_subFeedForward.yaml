@@ -1,13 +1,14 @@
 vocab_name: MusicTokenVocabNB
-model_name: DoubleSequentialTransformer
-input_embedder_name: SelfAttentionEmbedder
+model_name: NestedMusicTransformer
+input_embedder_name: SummationEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: CrossAttention_Strategy
+sub_decoder_name: FeedForward
 input_embedder:
   num_layer: 1
   num_head: 8
   dropout: 0.1
 main_decoder:
+  input_length: 1024
   dim_model: 512
   num_layer: 6
   num_head: 8
@@ -16,7 +17,6 @@ sub_decoder:
   rnn_hidden_size: 1024
   decout_window_size: 1 # 1 means no previous decoding output added
   num_layer: 1
-  feature_enricher_use: True
 emb:
   emb_size: 512
   total_size: -1
@@ -25,9 +25,19 @@ emb:
   instrument: 0.25 # cp 128
   pitch: 1 # cp 512
   duration: 0.25 # cp 128
+emb_mlp_layer:
+  use: False
+  num_layer: 2
+  hidden_size: 2048
+  dropout: 0.1 
+decoding_complexity_layer:
+  name: null # "None", "relu", "MLP", "multiMLP", "residualMLP"
+  num_layers: 2
+  hidden_size: 2048
+  dropout: 0.3 
 
 # sequential prediction pitch 1st
 prediction_order: ['pitch', 'duration', 'type', 'beat', 'instrument']
 
 # sequential prediction type 1st
-# prediction_order: ['type', 'beat', 'instrument', 'pitch', 'duration']
+# prediction_order: ['type', 'beat', 'chord', 'tempo', 'instrument', 'pitch', 'duration', 'velocity']
