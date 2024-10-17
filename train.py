@@ -40,7 +40,7 @@ def generate_experiment_name(config):
 
   # Add target hyperparameters to the experiment name
   # dropout
-  main_dropout = config.nn_params.main_decoder.dropout 
+  main_dropout = config.nn_params.model_dropout 
   # learning rate
   lr_decay_rate = config.train_params.decay_step_rate
 
