@@ -92,6 +92,16 @@ class FeedForward(SubDecoderClass):
     dropout:float, 
     sub_decoder_enricher_use:bool
   ):
+    '''
+    FeedForward sub-decoder is used for compound token like CP or NB.
+    We followed the original sub-decoder proposed in the paper "Compound Word Transformer",
+    however the embedding size for each sub-token or musical feature is the same in our implementation.
+    The reason for that is we didn't find any significant difference in the performance of the model
+
+    There are two types of decoding style for the FeedForward sub-decoder:
+    1. Partial-sequential prediction: Predict type token first and then predict all the sub-tokens in parallel (origianl CP)
+    2. Fully-sequential prediction: Predict all the sub-tokens sequentially
+    '''
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
   def _make_projection_layer(self, vocab, dim):
@@ -155,6 +165,10 @@ class Parallel(SubDecoderClass):
     dropout:float, 
     sub_decoder_enricher_use:bool
   ):
+    '''
+    Parallel sub-decoder is used for parallel prediction of multiple sub-tokens or musical features
+    This method is proposed in the paper "Multitrack Music Transformer"
+    '''
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
   def forward(self, input_dict, sampling_method=None, threshold=None, temperature=None):
@@ -189,6 +203,10 @@ class RNN(SubDecoderClass):
     dropout:float, 
     sub_decoder_enricher_use:bool
   ):
+    '''
+    RNN sub-decoder is used for sequential prediction of multiple sub-tokens or musical features
+    This method is similar to the method proposed in "PianoTree VAE"
+    '''
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
 
@@ -277,6 +295,12 @@ class SelfAttention(SubDecoderClass):
     dropout:float, 
     sub_decoder_enricher_use:bool
   ):
+    '''
+    This sub-decoder is used for sequential prediction of multiple sub-tokens or musical features
+    This method is similar to the method proposed in "UniAudio", but different in making the sequence of sub-tokens.
+    The UniAudio adds the output of the main decoder or hidden vec directly to embedding of the sub-token,
+    while our method puts the hidden vec in the input sequence so that the attention mechanism can learn the relationship between the hidden vec and the sub-token
+    '''
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
     
@@ -413,7 +437,7 @@ class SelfAttentionUniAudio(SelfAttention):
     Uniaudio version of self-attention sub-decoder
     Through the experiments, we found that the performance of the model is better than our proposed self-attention sub-decoder
     It shows comparable performance with the cross-attention sub-decoder
-    NMT shows better performance than UniAudio in terms of the performance of the model
+    However, NMT shows better performance than UniAudio in terms of the performance of the model
     '''
 
   def _prepare_token_embedding_for_teacher_forcing(self, hidden_vec_reshape, target):
@@ -484,6 +508,12 @@ class CrossAttention(SubDecoderClass):
     dropout:float, 
     sub_decoder_enricher_use:bool
   ):
+    '''
+    The power of Cross-attention and UniAudio style Self-attention lies in that using the output of the main decoder or hidden vec directly in the sub-decoder
+    As the output of the main decoder is the representation of the whole sequence, 
+    it contains richer information which can even decode out sub-tokens in a parallel manner
+    So both architectures using the output of the main decoder in a direct way show better performance than the original self-attention sub-decoder
+    '''
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.sub_decoder_enricher_use = sub_decoder_enricher_use
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}

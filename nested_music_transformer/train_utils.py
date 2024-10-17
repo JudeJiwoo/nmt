@@ -36,6 +36,7 @@ def adjust_prediction_order(encoding_scheme, num_features, target_feature, nn_pa
         else:
             prediction_order = feature_prediction_order_dict[num_features]
     elif encoding_scheme == 'nb':
+        assert target_feature in feature_prediction_order_dict[num_features], f"Target feature {target_feature} not in the selected sub-token set. Please check target feature in the config and num_features in nn_params."
         default_prediction_order = feature_prediction_order_dict[num_features]
         
         # Reorganize the prediction order based on the target_feature

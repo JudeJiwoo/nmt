@@ -636,7 +636,7 @@ class LanguageModelTrainer4CompoundToken(LanguageModelTrainer):
     probs_dict = {key:torch.softmax(value, dim=-1) for key, value in logits_dict.items()}
     num_nonmask_tokens = torch.sum(mask)
     input_seq = input_seq.to(self.device)
-    target = add_conti_in_valid(target, self.config.data_params.encoding_scheme).to(self.device)
+    target = add_conti_in_valid(target, self.config.nn_params.encoding_scheme).to(self.device)
     mask = mask[:, :-1].to(self.device)
     
     correct_guess_by_feature = defaultdict(int)

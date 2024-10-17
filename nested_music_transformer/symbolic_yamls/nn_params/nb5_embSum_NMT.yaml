@@ -1,3 +1,5 @@
+encoding_scheme: nb
+num_features: 5
 vocab_name: MusicTokenVocabNB
 model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder

@@ -41,6 +41,22 @@ class ResidualLayerNormModule(nn.Module):
     x =  x + res_x
     return self.layer_norm(x)
 
+class SingleEmbedding(nn.Module):
+  def __init__(
+    self, 
+    vocab, 
+    dim_model,
+  ):
+    '''
+    Embedding layer for REMI
+    '''
+    super().__init__()
+    vocab_size = vocab.get_vocab_size()
+    self.embedding = nn.Embedding(vocab_size, dim_model)
+
+  def forward(self, x):
+    return self.embedding(x)
+
 class MultiEmbedding(nn.Module):
   def __init__(
     self, 
@@ -49,9 +65,7 @@ class MultiEmbedding(nn.Module):
   ):
     super().__init__()
     '''
-    vocab_size: dict of vocab size for each embedding layer
-    input_keys: list of input keys
-    emb_param: dict of embedding size for each embedding layer
+    Embedding layer for compound tokens
     '''
     self.vocab_size = vocab.get_vocab_size()
     self.feature_list = vocab.feature_list

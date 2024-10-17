@@ -32,9 +32,7 @@ inference_params:
   num_uncond_generation: 1 # number of unconditional generation
   num_cond_generation: 3 # number of conditional generation
 data_params:
-  num_features: 5 # 4, 5, 7, 8 | number of sub-tokens
-  encoding_scheme: nb # remi, cp, nb
-  first_pred_feature: pitch # compound shifting for nb, remi and cp are not influenced by this argument
+  first_pred_feature: pitch # compound shifting for NB only, choose the target sub-token (remi and cp are not influenced by this argument)
   split_ratio: 0.8 # train-validation-test split ratio
   aug_type: random # random, null | pitch and chord augmentation type
 general:

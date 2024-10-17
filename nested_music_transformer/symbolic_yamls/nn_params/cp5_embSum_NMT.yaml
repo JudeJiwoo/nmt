@@ -1,3 +1,5 @@
+encoding_scheme: cp
+num_features: 5
 vocab_name: MusicTokenVocabCP
 model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder

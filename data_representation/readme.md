@@ -1,7 +1,7 @@
 # Data Representation
 
 <p align="center">
-<img src="figure/Data_Representation_Pipeline.png" width="500">
+<img src="figure/Data_Representation_Pipeline.png" width="1000">
 </p>
 
 

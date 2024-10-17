@@ -1,3 +1,5 @@
+encoding_scheme: remi
+num_features: 7
 vocab_name: LangTokenVocab
 model_name: NestedMusicTransformer
 input_embedder_name: SingleEmbedding

@@ -29,8 +29,8 @@ def ddp_setup(rank, world_size, backend='nccl'):
 def generate_experiment_name(config):
   # add base hyperparameters to the experiment name
   dataset_name = config.dataset
-  encoding_name = config.data_params.encoding_scheme
-  num_features = config.data_params.num_features
+  encoding_name = config.nn_params.encoding_scheme
+  num_features = config.nn_params.num_features
   input_embedder_name = config.nn_params.input_embedder_name
   sub_decoder_name = config.nn_params.sub_decoder_name
   batch_size = config.train_params.batch_size
@@ -71,8 +71,8 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     # Extract neural network parameters, dataset name, encoding scheme, and number of features from the configuration
     nn_params = config.nn_params
     dataset_name = config.dataset
-    encoding_scheme = config.data_params.encoding_scheme
-    num_features = config.data_params.num_features
+    encoding_scheme = nn_params.encoding_scheme
+    num_features = nn_params.num_features
 
     # get proper prediction order according to the encoding scheme and target feature in the config
     prediction_order = adjust_prediction_order(encoding_scheme, num_features, config.data_params.first_pred_feature, nn_params)
