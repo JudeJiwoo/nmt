@@ -3,50 +3,7 @@ import torch.nn as nn
 
 from x_transformers import Decoder, Encoder
 
-class MLP(nn.Module):
-  def __init__(self, in_size, out_size, hidden_size, dropout):
-    super().__init__()
-    self.input_size = in_size
-    self.layer = nn.Sequential(
-      nn.Linear(in_size, hidden_size),
-      nn.Dropout(dropout),
-      nn.ReLU(),
-      nn.Linear(hidden_size, out_size)
-    )
-
-  def forward(self, x):
-    return self.layer(x)
-  
-class extendedMLP(nn.Module):
-  def __init__(self, in_size, out_size, num_layers, hidden_size, dropout):
-    super().__init__()
-    self.input_size = in_size
-
-    self.layers = nn.ModuleList()
-    if num_layers == 1:
-      # single layer
-      self.layers.append(nn.Linear(in_size, out_size))
-      return
-    elif num_layers > 1:
-      # first layer
-      self.layers.append(nn.Linear(in_size, hidden_size))
-      self.layers.append(nn.Dropout(dropout))
-      self.layers.append(nn.ReLU())
-      # intermediate layers
-      if num_layers > 2:
-        for _ in range(num_layers - 2): 
-          self.layers.append(nn.Linear(hidden_size, hidden_size))
-          self.layers.append(nn.Dropout(dropout))
-          self.layers.append(nn.ReLU())
-      # last layer
-      self.layers.append(nn.Linear(hidden_size, out_size))
-    else:
-      raise ValueError("num_layers should be a positive integer")
-
-  def forward(self, x):
-     for layer in self.layers:
-         x = layer(x)
-     return x
+from data_representation.vocab_utils import LangTokenVocab
   
 class PosEncoding(nn.Module):
   def __init__(self, emb_size, max_t):
@@ -84,24 +41,11 @@ class ResidualLayerNormModule(nn.Module):
     x =  x + res_x
     return self.layer_norm(x)
 
-class SingleEmbedding(nn.Module):
-  def __init__(
-    self, 
-    vocab, 
-    dim_model,
-  ):
-    super().__init__()
-    vocab_size = vocab.get_vocab_size()
-    self.embedding = nn.Embedding(vocab_size, dim_model)
-
-  def forward(self, x):
-    return self.embedding(x)
-
 class MultiEmbedding(nn.Module):
   def __init__(
     self, 
-    vocab,
-    dim_model,
+    vocab:LangTokenVocab,
+    dim_model:int,
   ):
     super().__init__()
     '''
@@ -151,28 +95,29 @@ class MultiEmbedding(nn.Module):
     return len(self.layers)
 
   def get_emb_by_key(self, key, token):
-    '''
-    key: key of musical info
-    token: B x T (idx of musical info)
-    '''
     layer_idx = self.feature_list.index(key)
     return self.layers[layer_idx](token)
 
 class SummationEmbedder(MultiEmbedding):
-  def __init__(self, vocab, dim_model):
+  def __init__(
+    self, 
+    vocab:LangTokenVocab, 
+    dim_model:int
+  ):
     super().__init__(vocab, dim_model)
 
   def forward(self, seq):
-    '''
-    seq: B x T x num_features
-    '''
     emb_list = [module(seq[..., i]) for i, module in enumerate(self.layers)]
     stacked_emb = torch.stack(emb_list, dim=2) # B x T x num_features x emb_size
     output = torch.sum(stacked_emb, dim=2) # B x T x emb_size
     return output
 
 class SelfAttentionEmbedder(MultiEmbedding):
-  def __init__(self, vocab, dim_model:int):
+  def __init__(
+    self, 
+    vocab:LangTokenVocab, 
+    dim_model:int
+  ):
     super().__init__(vocab, dim_model)
     self.dropout = 0.1
 
@@ -246,7 +191,11 @@ class SelfAttentionEmbedder(MultiEmbedding):
     return output
 
 class RVQMultiEmbedding(nn.Module):
-  def __init__(self, vocab, dim_model):
+  def __init__(
+    self, 
+    vocab:LangTokenVocab, 
+    dim_model:int
+  ):
     super().__init__()
     self.vocab_size = vocab.get_vocab_size()
     self.dim_model = dim_model
@@ -276,10 +225,10 @@ class RVQMultiEmbedding(nn.Module):
 class XtransformerDecoder(nn.Module):
   def __init__(
       self, 
-      dim,
-      depth,
-      heads,
-      dropout
+      dim:int,
+      depth:int,
+      heads:int,
+      dropout:float
   ):
     super().__init__()
     self._make_decoder_layer(dim, depth, heads, dropout)

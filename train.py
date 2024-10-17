@@ -15,7 +15,7 @@ from omegaconf import DictConfig, OmegaConf
 from nested_music_transformer.symbolic_encoding import data_utils, decoding_utils
 from nested_music_transformer.symbolic_encoding.data_utils import get_emb_total_size
 from nested_music_transformer import model_zoo, trainer
-from nested_music_transformer.train_utils import NLLLoss4REMI, NLLLoss4CompoundToken, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler
+from nested_music_transformer.train_utils import NLLLoss4REMI, NLLLoss4CompoundToken, CosineAnnealingWarmUpRestarts, EncodecFlattenLoss, EncodecMultiClassLoss, CosineLRScheduler, adjust_prediction_order
 from nested_music_transformer.encodec.data_utils import EncodecDataset
 from data_representation import vocab_utils
 from run_evaluation import main as run_evaluation
@@ -74,6 +74,9 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     encoding_scheme = config.data_params.encoding_scheme
     num_features = config.data_params.num_features
 
+    # get proper prediction order according to the encoding scheme and target feature in the config
+    prediction_order = adjust_prediction_order(encoding_scheme, num_features, config.data_params.first_pred_feature, nn_params)
+
     # Prepare paths for input and output vocabulary files
     vocab_dir = Path(f'vocab/vocab_{dataset_name}')
     in_vocab_file_path = vocab_dir / f'vocab_{dataset_name}_{encoding_scheme}{num_features}.json'
@@ -103,9 +106,6 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
                                 first_pred_feature=config.data_params.first_pred_feature,
                                 )
 
-    # Update configuration based on the designated embedding size in nn_params
-    config = get_emb_total_size(config, symbolic_dataset.vocab)
-
     # Split dataset into training, validation, and test sets
     split_ratio = config.data_params.split_ratio
     trainset, validset, testset = symbolic_dataset.split_train_valid_test_set(
@@ -115,7 +115,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
     nested_music_transformer = getattr(model_zoo, nn_params.model_name)(
                           vocab=symbolic_dataset.vocab,
                           input_length=config.train_params.input_length,
-                          prediction_order=nn_params.prediction_order,
+                          prediction_order=prediction_order,
                           input_embedder_name=nn_params.input_embedder_name,
                           main_decoder_name=nn_params.main_decoder_name,
                           sub_decoder_name=nn_params.sub_decoder_name,
@@ -125,7 +125,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
                           dim=nn_params.main_decoder.dim_model,
                           heads=nn_params.main_decoder.num_head,
                           depth=nn_params.main_decoder.num_layer,
-                          dropout=nn_params.main_decoder.dropout,
+                          dropout=nn_params.model_dropout,
                           )
     
     # Log the total number of parameters in the model
@@ -147,7 +147,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
 
     # Set optimizer and learning rate scheduler based on the configuration
     optimizer = torch.optim.AdamW(nested_music_transformer.parameters(), lr=config.train_params.initial_lr, betas=(0.9, 0.95), eps=1e-08, weight_decay=0.01)
-    scheduler_dict = {'not-using': None,'cosineannealingwarmuprestarts': CosineAnnealingWarmUpRestarts, 'cosinelr': CosineLRScheduler}
+    scheduler_dict = {'not-using': None, 'cosineannealingwarmuprestarts': CosineAnnealingWarmUpRestarts, 'cosinelr': CosineLRScheduler}
     if scheduler_dict[config.train_params.scheduler] == CosineAnnealingWarmUpRestarts:
         scheduler = scheduler_dict[config.train_params.scheduler](optimizer, T_0=config.train_params.num_steps_per_cycle, T_mult=2, eta_min=0, eta_max=config.train_params.max_lr,  T_up=config.train_params.warmup_steps, gamma=config.train_params.gamma)
     elif scheduler_dict[config.train_params.scheduler] == CosineLRScheduler:
@@ -190,6 +190,7 @@ def preapre_sybmolic(config: DictConfig, save_dir: str, rank: int) -> trainer.La
                               sampling_temperature=sampling_temperature,
                               config=config
                               )
+    
     return training_module
 
 # Prepare Encodec dataset and model for training
@@ -200,6 +201,9 @@ def prepare_encodec(config, save_dir, rank):
     # Extract neural network (NN) parameters and encoding scheme from config
     nn_params = config.nn_params
     encoding_scheme = config.data_params.encoding_scheme
+
+    # no change in prediction order for encodec
+    prediction_order = ['k1', 'k2', 'k3', 'k4']
 
     # Create directory for storing vocabulary files, if it doesn't already exist
     vocab_dir = Path(f'vocab/vocab_MaestroEncodec')
@@ -228,7 +232,7 @@ def prepare_encodec(config, save_dir, rank):
     nested_music_transformer = getattr(model_zoo, nn_params.model_name)(
                             vocab=encodec_dataset.vocab,  # Vocab used by the dataset
                             input_length=config.train_params.input_length,  # Length of input sequences
-                            prediction_order=nn_params.prediction_order,  # Order in which predictions are made
+                            prediction_order=prediction_order,  # Order in which predictions are made
                             input_embedder_name=nn_params.input_embedder_name,  # Name of the embedding layer
                             main_decoder_name=nn_params.main_decoder_name,  # Main decoder name
                             sub_decoder_name=nn_params.sub_decoder_name,  # Sub-decoder name if applicable

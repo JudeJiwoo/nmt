@@ -19,6 +19,31 @@ def add_conti_for_single_feature(tensor):
   new_target[duplicates] = 9999
   return new_target
 
+def adjust_prediction_order(encoding_scheme, num_features, target_feature, nn_params):
+    feature_prediction_order_dict = {
+        4: ["type", "beat", "pitch", "duration"],
+        5: ["type", "beat", "instrument", "pitch", "duration"],
+        7: ["type", "beat", "chord", "tempo", "pitch", "duration", "velocity"],
+        8: ["type", "beat", "chord", "tempo", "instrument", "pitch", "duration", "velocity"]
+    }
+
+    if encoding_scheme == 'remi':
+        prediction_order = feature_prediction_order_dict[num_features]
+    elif encoding_scheme == 'cp':
+        if nn_params.get("partial_sequential_prediction", False):
+            default_prediction_order = feature_prediction_order_dict[num_features]
+            prediction_order = [default_prediction_order[0], default_prediction_order[1:]]
+        else:
+            prediction_order = feature_prediction_order_dict[num_features]
+    elif encoding_scheme == 'nb':
+        default_prediction_order = feature_prediction_order_dict[num_features]
+        
+        # Reorganize the prediction order based on the target_feature
+        target_index = default_prediction_order.index(target_feature)
+        prediction_order = default_prediction_order[target_index:] + default_prediction_order[:target_index]
+        
+    return prediction_order
+
 ########################### Loss function ################################
 
 class NLLLoss4REMI():

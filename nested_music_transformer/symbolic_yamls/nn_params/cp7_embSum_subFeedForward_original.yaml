@@ -1,13 +1,15 @@
-vocab_name: MusicTokenVocabNB
+vocab_name: MusicTokenVocabCP
 model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: RNN
+sub_decoder_name: FeedForward
 model_dropout: 0.1
+partial_sequential_prediction: True
 input_embedder:
   num_layer: 1
   num_head: 8
 main_decoder:
+  input_length: 1024
   dim_model: 512
   num_layer: 6
   num_head: 8

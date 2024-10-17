@@ -83,14 +83,14 @@ class SubDecoderClass(nn.Module):
   
 class FeedForward(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
@@ -146,14 +146,14 @@ class FeedForward(SubDecoderClass):
 
 class Parallel(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 
@@ -180,14 +180,14 @@ class Parallel(SubDecoderClass):
 
 class RNN(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
@@ -268,14 +268,14 @@ class RNN(SubDecoderClass):
 
 class SelfAttention(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.feature_order_in_output = {key: (idx-len(prediction_order)) for idx, key in enumerate(prediction_order)}
@@ -399,18 +399,21 @@ class SelfAttention(SubDecoderClass):
 
 class SelfAttentionUniAudio(SelfAttention):
   def __init__(
-      self, 
-      prediction_order, 
-      vocab, 
-      sub_decoder_depth, 
-      dim, 
-      heads, 
-      dropout,
-      sub_decoder_enricher_use
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     '''
     Uniaudio version of self-attention sub-decoder
+    Through the experiments, we found that the performance of the model is better than our proposed self-attention sub-decoder
+    It shows comparable performance with the cross-attention sub-decoder
+    NMT shows better performance than UniAudio in terms of the performance of the model
     '''
 
   def _prepare_token_embedding_for_teacher_forcing(self, hidden_vec_reshape, target):
@@ -472,14 +475,14 @@ class SelfAttentionUniAudio(SelfAttention):
 
 class CrossAttention(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
     self.sub_decoder_enricher_use = sub_decoder_enricher_use
@@ -596,14 +599,14 @@ class CrossAttention(SubDecoderClass):
 
 class Flatten4Encodec(SubDecoderClass):
   def __init__(
-      self, 
-      prediction_order:list, 
-      vocab:LangTokenVocab, 
-      sub_decoder_depth:int, 
-      dim:int, 
-      heads:int, 
-      dropout:float, 
-      sub_decoder_enricher_use:bool
+    self, 
+    prediction_order:list, 
+    vocab:LangTokenVocab, 
+    sub_decoder_depth:int, 
+    dim:int, 
+    heads:int, 
+    dropout:float, 
+    sub_decoder_enricher_use:bool
   ):
     super().__init__(prediction_order, vocab, sub_decoder_depth, dim, heads, dropout, sub_decoder_enricher_use)
 

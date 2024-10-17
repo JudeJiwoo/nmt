@@ -97,7 +97,7 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
   def forward(self, input_seq:torch.Tensor, target:torch.Tensor):
     return self.net(input_seq, target)
   
-  def _prepare_inference(self, start_token, manual_seed, condition=None):
+  def _prepare_inference(self, start_token, manual_seed, condition=None, num_target_measures=4):
     '''
     Prepares the initial tokens for autoregressive inference. If a manual seed is provided, 
     it sets the seed for reproducibility. If a condition is given, it selects a subset of 
@@ -121,9 +121,6 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
       # Use the start token if no condition is given
       total_out.extend(start_token)
     else:
-      # Define the number of measures to consider
-      num_target_measures = 4
-
       # Extract the portion of the sequence depending on encoding scheme (remi, cp, or nb)
       if self.net.vocab.encoding_scheme == 'remi':
         type_boundaries = self.net.vocab.remi_vocab_boundaries_by_key['type']
@@ -311,19 +308,19 @@ class NestedMusicTransformer(nn.Module):
 
 class NestedMusicTransformer4Encodec(NestedMusicTransformer):
   def __init__(
-      self, 
-      vocab, 
-      input_length, 
-      prediction_order, 
-      input_embedder_name, 
-      main_decoder_name, 
-      sub_decoder_name, 
-      sub_decoder_depth, 
-      sub_decoder_enricher_use,
-      dim, 
-      heads, 
-      depth, 
-      dropout
+    self, 
+    vocab:LangTokenVocab,                 
+    input_length:int,           
+    prediction_order:list,       
+    input_embedder_name:str,    
+    main_decoder_name:str,      
+    sub_decoder_name:str,       
+    sub_decoder_depth:int,      
+    sub_decoder_enricher_use:bool, 
+    dim:int,                    
+    heads:int,                 
+    depth:int,                 
+    dropout:float                 
   ):
     super().__init__(
       vocab=vocab, 

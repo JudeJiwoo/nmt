@@ -17,25 +17,42 @@ def sort_key(s):
 
 class LangTokenVocab:
   def __init__(
-      self, 
-      in_vocab_file_path:Union[Path, None],
-      event_data: list, 
-      encoding_scheme: str, 
-      num_features: int
+    self, 
+    in_vocab_file_path:Union[Path, None],
+    event_data: list, 
+    encoding_scheme: str, 
+    num_features: int
   ):
     '''
-    this vocab does not consider the musical meaning of the tokens.
-    so, it handles all tokens as a single token with no distinction like language tokenization.
+    Initializes the LangTokenVocab class.
+    
+    Args:
+      in_vocab_file_path (Union[Path, None]): Path to the pre-made vocabulary file (optional).
+      event_data (list): List of event data to create a vocabulary if no pre-made vocab is provided.
+      encoding_scheme (str): Encoding scheme to be used (e.g., 'remi', 'cp', 'nb').
+      num_features (int): Number of features to be used (e.g., 4, 5, 7, 8).
+    
+    Summary:
+    This class is responsible for handling vocabularies used in language models, especially for REMI encoding. 
+    It supports multiple encoding schemes, creates vocabularies based on event data, handles special tokens (e.g., 
+    start/end of sequence), and manages feature-specific masks. It provides methods for saving, loading, and decoding
+    vocabularies. It also supports vocabulary augmentation for pitch, instrument, beat, and chord features, ensuring 
+    that these are arranged and ordered appropriately.
+
+    For all encoding schemes, the metric or special tokens are named as 'type', 
+    so that we can easily handle and compare among different encoding schemes.
     '''
+
     self.encoding_scheme = encoding_scheme
     self.num_features = num_features
-    self._prepare_in_vocab(in_vocab_file_path, event_data)
-    self._get_features()
-    self.idx2event, self.event2idx = self._get_vocab(event_data, unique_vocabs=self.idx2event)
+    self._prepare_in_vocab(in_vocab_file_path, event_data)  # Prepares initial vocab based on the input file or event data
+    self._get_features()  # Extracts relevant features based on the num_features
+    self.idx2event, self.event2idx = self._get_vocab(event_data, unique_vocabs=self.idx2event)  # Creates vocab or loads premade vocab
     if self.encoding_scheme == 'remi':
-      self._make_mask()
-    self._get_sos_eos_token()
+      self._make_mask()  # Generates masks for 'remi' encoding scheme
+    self._get_sos_eos_token()  # Retrieves special tokens (Start of Sequence, End of Sequence)
 
+  # Prepares vocabulary if a pre-made vocab file exists or handles cases with no input file.
   def _prepare_in_vocab(self, in_vocab_file_path, event_data):
     if in_vocab_file_path is not None and in_vocab_file_path.exists():
       with open(in_vocab_file_path, 'r') as f:
@@ -51,6 +68,7 @@ class LangTokenVocab:
     else:
       self.idx2event = None
 
+  # Extracts features depending on the number of features chosen (4, 5, 7, 8).
   def _get_features(self):
     feature_args = {
       4: ["type", "beat", "pitch", "duration"],
@@ -59,13 +77,16 @@ class LangTokenVocab:
       8: ["type", "beat", "chord", "tempo", "instrument", "pitch", "duration", "velocity"]}
     self.feature_list = feature_args[self.num_features]
 
+  # Saves the current vocabulary to a specified JSON path.
   def save_vocab(self, json_path):
     with open(json_path, 'w') as f:
       json.dump(self.idx2event, f, indent=2, ensure_ascii=False)
 
+  # Returns the size of the current vocabulary.
   def get_vocab_size(self):
     return len(self.idx2event)
 
+  # Handles Start of Sequence (SOS) and End of Sequence (EOS) tokens based on the encoding scheme.
   def _get_sos_eos_token(self):
     if self.encoding_scheme == 'remi':
       self.sos_token = [self.event2idx['SOS_None']]
@@ -74,6 +95,7 @@ class LangTokenVocab:
       self.sos_token = [[self.event2idx['type']['SOS']] + [0] * (self.num_features - 1)]
       self.eos_token = [[self.event2idx['type']['EOS']] + [0] * (self.num_features - 1)]
 
+  # Generates vocabularies by either loading from a file or creating them based on the event data.
   def _get_vocab(self, event_data, unique_vocabs=None):
     # make new vocab from given event_data
     if event_data is not None:
@@ -99,6 +121,7 @@ class LangTokenVocab:
       event2idx = {tok : int(idx) for idx, tok in unique_vocabs.items()}
     return idx2event, event2idx
 
+  # Augments the pitch vocabulary by expanding the range of pitch values.
   def _augment_pitch_vocab(self, unique_vocabs):
     pitch_vocab = [x for x in unique_vocabs if 'Note_Pitch_' in x]
     pitch_int = [int(x.replace('Note_Pitch_', '')) for x in pitch_vocab if x.replace('Note_Pitch_', '').isdigit()]
@@ -110,12 +133,14 @@ class LangTokenVocab:
     new_unique_vocab = [x for x in unique_vocabs if x not in new_pitch_vocab] + new_pitch_vocab
     return new_unique_vocab
 
+  # Orders and arranges the instrument vocabulary.
   def _arange_instrument_vocab(self, unique_vocabs):
     instrument_vocab = [x for x in unique_vocabs if 'Instrument_' in x]
     new_instrument_vocab = sorted(instrument_vocab, key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
     new_unique_vocab = [x for x in unique_vocabs if x not in new_instrument_vocab] + new_instrument_vocab
     return new_unique_vocab
 
+  # Orders and arranges the chord vocabulary, ensuring 'Chord_N_N' is the last token.
   def _arange_chord_vocab(self, unique_vocabs):
     '''
     for chord augmentation
@@ -128,6 +153,7 @@ class LangTokenVocab:
     new_unique_vocab = [x for x in unique_vocabs if x not in new_chord_vocab] + new_chord_vocab
     return new_unique_vocab
 
+  # Orders and arranges the beat vocabulary.
   def _arange_beat_vocab(self, unique_vocabs):
     beat_vocab = [x for x in unique_vocabs if 'Beat_' in x]
     new_beat_vocab = sorted(beat_vocab, key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
@@ -137,8 +163,12 @@ class LangTokenVocab:
         unique_vocabs[idx] = new_beat_vocab[count]
         count += 1
     return unique_vocabs     
-  
+
+  # Generates masks for the 'remi' encoding scheme.
   def _make_mask(self):
+    '''
+    This function is used to extract the target musical features for validation.
+    '''
     idx2feature = {}
     for idx, feature in self.idx2event.items():
       if feature.startswith('SOS') or feature.startswith('EOS') or feature.startswith('Bar'):
@@ -172,7 +202,7 @@ class LangTokenVocab:
 
   def decode(self, events:torch.Tensor):
     '''
-    used for checking events in the evaluation
+    Used for checking events in the evaluation
     events: 1d tensor
     '''
     decoded_list = []
@@ -188,52 +218,151 @@ class LangTokenVocab:
 
 class MusicTokenVocabCP(LangTokenVocab):
   def __init__(
-      self, 
-      in_vocab_file_path, 
-      event_data, 
-      encoding_scheme, 
-      num_features
+    self, 
+    in_vocab_file_path:Union[Path, None],
+    event_data: list, 
+    encoding_scheme: str, 
+    num_features: int
   ):
+    # Initialize the vocabulary class with vocab file path, event data, encoding scheme, and feature count
     super().__init__(in_vocab_file_path, event_data, encoding_scheme, num_features)
-    '''
-    this vocab considers the musical meaning of the tokens.
-    so, it has different classes(features) in tokens.
-    '''
 
   def _augment_pitch_vocab(self, unique_vocabs):
+    # Extract pitch-related vocabularies and adjust pitch range
     pitch_total_vocab = unique_vocabs['pitch']
     pitch_vocab = [x for x in pitch_total_vocab if 'Note_Pitch_' in str(x)]
     pitch_int = [int(x.replace('Note_Pitch_', '')) for x in pitch_vocab if x.replace('Note_Pitch_', '').isdigit()]
+    # Determine the min and max pitch values and extend the pitch range slightly
     min_pitch = min(pitch_int)
     max_pitch = max(pitch_int)
-    min_pitch_margin = max(min_pitch-6, 0)
-    max_pitch_margin = min(max_pitch+7, 127)
-    new_pitch_vocab = [f'Note_Pitch_{x}' for x in range(min_pitch_margin, max_pitch_margin+1)]
+    min_pitch_margin = max(min_pitch - 6, 0)
+    max_pitch_margin = min(max_pitch + 7, 127)
+    # Create new pitch vocab and ensure new entries do not overlap with existing ones
+    new_pitch_vocab = [f'Note_Pitch_{x}' for x in range(min_pitch_margin, max_pitch_margin + 1)]
     new_pitch_vocab = [x for x in pitch_total_vocab if str(x) not in new_pitch_vocab] + new_pitch_vocab
     unique_vocabs['pitch'] = new_pitch_vocab
     return unique_vocabs
 
   def _mp_get_unique_vocab(self, tune, features):
+    # Read event data from a file and collect unique vocabularies for specified features
     with open(tune, 'rb') as f:
-      events_list = pickle.load(f)
+        events_list = pickle.load(f)
     unique_vocabs = defaultdict(set)
     for event in events_list:
-      for key in features:
-        unique_vocabs[key].add(event[key])
+        for key in features:
+            unique_vocabs[key].add(event[key])
     return unique_vocabs
 
   def _get_chord_vocab(self):
     '''
-    chord vocab should be manually defined for chord augmentation,
-    and the list of root and quality is from the chord utils used in the paper Compound Word Transformer
+    Manually define the chord vocabulary by combining roots and qualities
+    from a predefined list. This is used for chord augmentation.
     '''
-    root_list = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E','F', 'F#', 'G', 'G#']
+    root_list = ['A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#']
     quality_list = ['+', '/o7', '7', 'M', 'M7', 'm', 'm7', 'o', 'o7', 'sus2', 'sus4']
     chord_vocab = [f'Chord_{root}_{quality}' for root in root_list for quality in quality_list]
+    # Sort the chord vocabulary based on the root and quality
     chord_vocab = sorted(chord_vocab, key=lambda x: (not isinstance(x, int), x.split('_')[-1] if isinstance(x, str) else x, x.split('_')[0] if isinstance(x, str) else x))
     return chord_vocab
 
+  def _cp_sort_type(self, unique_vocabs):
+    # Similar to _nb_sort_type but used for the 'cp' encoding scheme, sorting vocabularies in a different order
+    unique_vocabs.remove('SOS')
+    unique_vocabs.remove('EOS')
+    unique_vocabs.remove('Metrical')
+    unique_vocabs.remove('Note')
+    vocab_list = list(unique_vocabs)
+    unique_vocabs = sorted(vocab_list, key=sort_key)
+    unique_vocabs.insert(0, 'SOS')
+    unique_vocabs.insert(1, 'EOS')
+    unique_vocabs.insert(2, 'Metrical')
+    unique_vocabs.insert(3, 'Note')
+    return unique_vocabs
+
+  def _get_vocab(self, event_data, unique_vocabs=None):
+    if event_data is not None:
+        # Create vocab mappings (event2idx, idx2event) from the provided event data
+        print('start to get unique vocab')
+        event2idx = {}
+        idx2event = {}
+        unique_vocabs = defaultdict(set)
+        # Use multiprocessing to extract unique vocabularies for each event
+        with Pool(cpu_count()) as p:
+            results = p.starmap(self._mp_get_unique_vocab, tqdm([(tune, self.feature_list) for tune in event_data]))
+        # Combine results from different processes
+        for result in results:
+            for key in self.feature_list:
+                if key == 'chord':  # Chords are handled separately
+                    continue
+                unique_vocabs[key].update(result[key])
+        # Augment pitch vocab and add manually defined chord vocab
+        unique_vocabs = self._augment_pitch_vocab(unique_vocabs)
+        unique_vocabs['chord'] = self._get_chord_vocab()
+        # Process each feature type, handling special cases like 'tempo' and 'chord'
+        for key in self.feature_list:
+            if key == 'tempo':
+                remove_nn_flag = False
+                if 'Tempo_N_N' in unique_vocabs[key]:
+                    unique_vocabs[key].remove('Tempo_N_N')
+                    remove_nn_flag = True
+                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
+                if remove_nn_flag:
+                    unique_vocabs[key].insert(1, 'Tempo_N_N')
+            elif key == 'chord':
+                unique_vocabs[key].insert(0, 0)
+                unique_vocabs[key].insert(1, 'Chord_N_N')
+            elif key == 'type':  # Sort 'type' vocab depending on the encoding scheme
+                if self.encoding_scheme == 'cp':
+                    unique_vocabs[key] = self._cp_sort_type(unique_vocabs[key])
+                else:  # NB encoding scheme
+                    unique_vocabs[key] = self._nb_sort_type(unique_vocabs[key])
+            elif key == 'beat' and self.encoding_scheme == 'cp':  # Handle 'beat' vocab with 'cp' scheme
+                unique_vocabs[key].remove('Bar')
+                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
+                unique_vocabs[key].insert(1, 'Bar')
+            elif key == 'beat' and self.encoding_scheme == 'nb':  # Handle 'beat' vocab with 'nb' scheme
+                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
+            elif key == 'instrument':  # Sort 'instrument' vocab by integer values
+                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
+            else:  # Default case: sort by integer values for other keys
+                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
+            # Create event2idx and idx2event mappings for each feature
+            event2idx[key] = {tok: int(idx) for idx, tok in enumerate(unique_vocabs[key])}
+            idx2event[key] = {int(idx): tok for idx, tok in enumerate(unique_vocabs[key])}
+        return idx2event, event2idx
+    else:
+        # If no event data, simply map unique vocab to indexes
+        event2idx = {}
+        for key in self.feature_list:
+            event2idx[key] = {tok: int(idx) for idx, tok in unique_vocabs[key].items()}
+        return unique_vocabs, event2idx
+
+  def get_vocab_size(self):
+    # Return the size of the vocabulary for each feature
+    return {key: len(self.idx2event[key]) for key in self.feature_list}
+
+  def __call__(self, event):
+    # Convert an event to its corresponding indices
+    return [self.event2idx[key][event[key]] for key in self.feature_list]
+        
+  def decode(self, events:torch.Tensor):
+    decoded_list = []
+    for event in events:
+      decoded_list.append([self.idx2event[key][event[idx].item()] for idx, key in enumerate(self.feature_list)])
+    return decoded_list
+
+class MusicTokenVocabNB(MusicTokenVocabCP):
+  def __init__(
+    self, 
+    in_vocab_file_path:Union[Path, None],
+    event_data: list, 
+    encoding_scheme: str, 
+    num_features: int
+  ):
+    super().__init__(in_vocab_file_path, event_data, encoding_scheme, num_features)
+
   def _nb_sort_type(self, unique_vocabs):
+    # Remove special tokens and sort the remaining vocab list, then re-insert the special tokens in order
     unique_vocabs.remove('SOS')
     unique_vocabs.remove('EOS')
     unique_vocabs.remove('Empty_Bar')
@@ -249,95 +378,3 @@ class MusicTokenVocabCP(LangTokenVocab):
     unique_vocabs.insert(4, 'SSN')
     unique_vocabs.insert(5, 'SNN')
     return unique_vocabs
-
-  def _cp_sort_type(self, unique_vocabs):
-    unique_vocabs.remove('SOS')
-    unique_vocabs.remove('EOS')
-    unique_vocabs.remove('Metrical')
-    unique_vocabs.remove('Note')
-    vocab_list = list(unique_vocabs)
-    unique_vocabs = sorted(vocab_list, key=sort_key)
-    unique_vocabs.insert(0, 'SOS')
-    unique_vocabs.insert(1, 'EOS')
-    unique_vocabs.insert(2, 'Metrical')
-    unique_vocabs.insert(3, 'Note')
-    return unique_vocabs
-
-  def _get_vocab(self, event_data, unique_vocabs=None):
-    if event_data is not None:
-      print('start to get unique vocab')
-      event2idx = {}
-      idx2event = {}
-      unique_vocabs = defaultdict(set)
-      with Pool(cpu_count()) as p:
-        results = p.starmap(self._mp_get_unique_vocab, tqdm([(tune, self.feature_list) for tune in event_data]))
-      for result in results:
-        for key in self.feature_list:
-          if key == 'chord': # we will deal with chord separately
-            continue
-          unique_vocabs[key].update(result[key])
-      unique_vocabs = self._augment_pitch_vocab(unique_vocabs)
-      unique_vocabs['chord'] = self._get_chord_vocab()
-      for key in self.feature_list:
-        # "CONTI" should be the 2nd token in the list
-        if key == 'tempo':
-          remove_nn_flag = False
-          # unique_vocabs[key].remove('CONTI')
-          if 'Tempo_N_N' in unique_vocabs[key]:
-            unique_vocabs[key].remove('Tempo_N_N')
-            remove_nn_flag = True
-          unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-          # unique_vocabs[key].insert(1, 'CONTI')
-          if remove_nn_flag:
-            unique_vocabs[key].insert(1, 'Tempo_N_N')
-        elif key == 'chord':
-          unique_vocabs[key].insert(0, 0)
-          # unique_vocabs[key].insert(1, 'CONTI')
-          unique_vocabs[key].insert(1, 'Chord_N_N')
-        elif key == 'type': # deal with string only
-          if self.encoding_scheme == 'cp':
-            unique_vocabs[key] = self._cp_sort_type(unique_vocabs[key])
-          else: # NB
-            unique_vocabs[key] = self._nb_sort_type(unique_vocabs[key])
-        elif key == 'beat' and self.encoding_scheme == 'cp': # deal with string and int and complicated string(ex. Beat_0)
-          unique_vocabs[key].remove('Bar')
-          unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-          unique_vocabs[key].insert(1, 'Bar')
-        elif key == 'beat' and self.encoding_scheme == 'nb':
-          # unique_vocabs[key].remove('CONTI')
-          unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-          # unique_vocabs[key].insert(1, 'CONTI')
-        elif key == 'instrument':
-          # unique_vocabs[key].remove('CONTI')
-          unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-          # unique_vocabs[key].insert(1, 'CONTI')
-        else:
-          unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-        event2idx[key] = {tok : int(idx) for idx, tok in enumerate(unique_vocabs[key])}
-        idx2event[key] = {int(idx) : tok for idx, tok in enumerate(unique_vocabs[key])}
-      return idx2event, event2idx
-    else:
-      event2idx = {}
-      for key in self.feature_list:
-        event2idx[key] = {tok : int(idx) for idx, tok in unique_vocabs[key].items()}
-      return unique_vocabs, event2idx
-  
-  def get_vocab_size(self):
-    return {key : len(self.idx2event[key]) for key in self.feature_list}
-
-  def __call__(self, event):
-    return [self.event2idx[key][event[key]] for key in self.feature_list]
-        
-  def decode(self, events:torch.Tensor):
-    decoded_list = []
-    for event in events:
-      decoded_list.append([self.idx2event[key][event[idx].item()] for idx, key in enumerate(self.feature_list)])
-    return decoded_list
-
-class MusicTokenVocabNB(MusicTokenVocabCP):
-  def __init__(self, in_vocab_file_path, event_data, encoding_scheme, num_features):
-    super().__init__(in_vocab_file_path, event_data, encoding_scheme, num_features)
-    '''
-    this vocab considers the musical meaning of the tokens.
-    so, it has different classes(features) in tokens.
-    '''

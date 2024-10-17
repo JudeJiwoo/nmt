@@ -1,8 +1,8 @@
-vocab_name: MusicTokenVocabNB
+vocab_name: MusicTokenVocabCP
 model_name: NestedMusicTransformer
 input_embedder_name: SummationEmbedder
 main_decoder_name: XtransformerDecoder
-sub_decoder_name: RNN
+sub_decoder_name: CrossAttention
 model_dropout: 0.1
 input_embedder:
   num_layer: 1
@@ -14,3 +14,4 @@ main_decoder:
 sub_decoder:
   decout_window_size: 1 # 1 means no previous decoding output added
   num_layer: 1
+  feature_enricher_use: True

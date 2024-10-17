@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from . import model_zoo
 from .encodec.data_utils import EncodecDataset
 from .symbolic_encoding import data_utils
-from .model_zoo import DoubleSequentialTransformer
+from .model_zoo import NestedMusicTransformer
 from .symbolic_encoding.data_utils import TuneCompiler
 from .symbolic_encoding.compile_utils import shift_and_pad
 from .symbolic_encoding.compile_utils import reverse_shift_and_pad_for_tensor
@@ -211,7 +211,7 @@ def add_conti(list_of_lists, encoding_scheme):
 class Evaluator:
   def __init__(self, 
                config: DictConfig, 
-               model:DoubleSequentialTransformer, 
+               model:NestedMusicTransformer, 
                test_set:TuneCompiler, 
                vocab: Union[LangTokenVocab, EncodecVocab],
                device:str='cuda',

@@ -1,50 +1,43 @@
 defaults:
-  - nn_params: nb5_embSum_subCrossAttention
+  - nn_params: nb5_embSum_NMT
 
-# Pop1k7, Pop909, LakhClean, SOD, BachChorale
-dataset: SOD
-use_ddp: False
-use_fp16: True
+dataset: SOD # Pop1k7, Pop909, LakhClean, SOD
+use_ddp: False # True, False | distributed data parallel
+use_fp16: True # True, False | mixed precision training
 
 train_params:
   device: cuda
   batch_size: 8
   grad_clip: 1.0
-  num_iter: 100000
-  num_cycles_for_inference: 10
-  num_cycles_for_model_checkpoint: 10
-  iterations_per_training_cycle: 10
-  iterations_per_validation_cycle: 3000
-  # input sequence length
-  input_length: 1024
-  # focal loss
+  num_iter: 100000 # total number of iterations
+  num_cycles_for_inference: 10 # number of cycles for inference, iterations_per_validation_cycle * num_cycles_for_inference
+  num_cycles_for_model_checkpoint: 10 # number of cycles for model checkpoint, iterations_per_validation_cycle * num_cycles_for_model_checkpoint
+  iterations_per_training_cycle: 10 # number of iterations for logging training loss
+  iterations_per_validation_cycle: 3000 # number of iterations for validation process
+  input_length: 1024  # input sequence length
+  # you can use focal loss, it it's not used, set focal_gamma to 0
   focal_alpha: 1
   focal_gamma: 0
-  # learning rate
-  scheduler : cosinelr # 'cosineannealingwarmuprestarts', 'not-using'
+  # learning rate scheduler: 'cosinelr', 'cosineannealingwarmuprestarts', 'not-using', please check train_utils.py for more details
+  scheduler : cosinelr
   initial_lr: 0.0001
   decay_step_rate: 0.8 # means it will reach its lowest point at decay_step_rate * total_num_iter
-  num_steps_per_cycle: 20000
-  warmup_steps: 2000
-  max_lr: 0.00015
-  gamma: 0.6
-  # share embedding between transformer and pred strategy
-  emb_share: False
-  world_size: 0
+  num_steps_per_cycle: 20000 # number of steps per cycle for 'cosineannealingwarmuprestarts'
+  warmup_steps: 2000 # number of warmup steps
+  max_lr: 0.00015 
+  gamma: 0.6 # the decay rate for 'cosineannealingwarmuprestarts'
+  # Distributed Data Parallel
+  world_size: 0 # 0 means no distributed training
 inference_params:
-  n_uncond_generation: 1
-  n_cond_generation: 3
+  num_uncond_generation: 1 # number of unconditional generation
+  num_cond_generation: 3 # number of conditional generation
 data_params:
-  num_features: 5 # 4, 5, 7, 8
+  num_features: 5 # 4, 5, 7, 8 | number of sub-tokens
   encoding_scheme: nb # remi, cp, nb
-  first_pred_feature: type # type, beat, chord, tempo, instrument, pitch, duration, velocity
-  split_ratio: 0.8
-  aug_type: random # random, null
+  first_pred_feature: pitch # compound shifting for nb, remi and cp are not influenced by this argument
+  split_ratio: 0.8 # train-validation-test split ratio
+  aug_type: random # random, null | pitch and chord augmentation type
 general:
   debug: False
-  make_log: False
-  save_attn_output: True
-  infer_and_log: True
-  log_train_metric: True
-  log_all_feature_loss: True # for cp and nb not remi
-  save_dir: 'runs/'
+  make_log: False # True, False | update the log file in wandb online to your designated project and entity
+  infer_and_log: True # True, False | inference and log the results

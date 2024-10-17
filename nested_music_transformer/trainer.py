@@ -24,7 +24,6 @@ from .train_utils import NLLLoss4REMI
 from data_representation.vocab_utils import LangTokenVocab
 
 class LanguageModelTrainer:
-    # Initialize the trainer with the model, optimizer, scheduler, loss function, datasets, and other configurations
     def __init__(
         self,
         model: NestedMusicTransformer,  # The language model for music generation
@@ -95,16 +94,10 @@ class LanguageModelTrainer:
         self.iterations_per_training_cycle = config.train_params.iterations_per_training_cycle
         self.iterations_per_validation_cycle = config.train_params.iterations_per_validation_cycle
         self.make_log = config.general.make_log
-        self.num_uncond_generation = config.inference_params.n_uncond_generation
-        self.num_cond_generation = config.inference_params.n_cond_generation
+        self.num_uncond_generation = config.inference_params.num_uncond_generation
+        self.num_cond_generation = config.inference_params.num_cond_generation
         self.num_max_seq_len = infer_target_len
         self.infer_and_log = config.general.infer_and_log
-        self.log_train_metric = config.general.log_train_metric
-
-        # Ensure prediction order and first prediction feature are consistent
-        if type(config.nn_params.prediction_order[0]) == str:
-            assert config.nn_params.prediction_order[0] == config.data_params.first_pred_feature, \
-                "first_pred_feature should be the first element of prediction_order"
 
         # Initialize tracking metrics
         self.best_valid_accuracy = 0
