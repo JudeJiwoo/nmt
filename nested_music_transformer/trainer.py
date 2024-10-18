@@ -166,6 +166,9 @@ class LanguageModelTrainer:
                 train_metric_dict = self._rename_dict(train_metric_dict, 'train')
                 wandb.log(train_metric_dict, step=i)
 
+                # delete variables to avoid memory leakages
+                del validation_loss, num_nonmask_tokens, loss_dict, num_tokens_by_feature, correct_guess_by_feature, train_metric_dict
+
             # Perform validation at the specified interval
             if (i + 1) % self.iterations_per_validation_cycle == 0:
                 self.model.eval()
@@ -187,6 +190,9 @@ class LanguageModelTrainer:
                 if (i + 1) % (self.iterations_per_validation_cycle * self.num_cycles_for_model_checkpoint) == 0:
                     self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
                 self.model.train()
+
+                # delete variables to avoid memory leakages
+                del validation_loss, validation_acc, validation_metric_dict
 
         # Save the final model after training
         self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
@@ -758,34 +764,66 @@ class EncodecFlattenTrainer(LanguageModelTrainer):
     super().__init__(model, optimizer, scheduler, loss_fn, midi_decoder, train_set, valid_set, save_dir, vocab, use_ddp, use_fp16, world_size, batch_size, infer_target_len, gpu_id, sampling_method, sampling_threshold, sampling_temperature, config)
     # self.encodec_pretrained_model = CompressionSolver.model_from_checkpoint("/home/clay/userdata/symbolic-music-encoding/encodec_checkpoint/checkpoint.th", 'cuda')
 
+  # Training function based on a given number of iterations
   def train_by_num_iter(self, num_iters):
-    generator = iter(self.train_loader)
-    for i in tqdm(range(num_iters)):
-      try:
-        batch = next(generator)
-      except StopIteration:
-        self.train_loader = self.generate_data_loader(self.train_set, shuffle=True, drop_last=False)
-        generator = iter(self.train_loader)
-        batch = next(generator)
-    
-      self.model.train()
-      _, loss_dict = self._train_by_single_batch(batch)
-      loss_dict = self._rename_dict(loss_dict, 'train')
-      if (i+1) % self.iterations_per_training_cycle == 0 and self.make_log:
-        wandb.log(loss_dict, step=i)
-      if (i+1) % self.iterations_per_validation_cycle == 0:
-        self.model.eval()
-        validation_loss, validation_acc, validation_metric_dict = self.validate()
-        validation_metric_dict['acc'] = validation_acc
-        validation_metric_dict = self._rename_dict(validation_metric_dict, 'valid')
-        if self.make_log:
-          wandb.log(validation_metric_dict, step=i)
-      if (i+1) % (self.num_cycles_for_inference * self.iterations_per_validation_cycle) == 0 and self.infer_and_log:
-        self.inference_and_log(i, self.num_uncond_generation, self.num_cond_generation, self.num_max_seq_len)
-      if (i+1) % (self.iterations_per_validation_cycle * self.num_cycles_for_model_checkpoint) == 0:
-        self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
-        print(f"Model saved at {self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt'}")
-    self.save_model(self.save_dir / f'iter{num_iters}_loss{validation_loss:.4f}.pt')
+      generator = iter(self.train_loader)
+      for i in tqdm(range(num_iters)):
+          try:
+              batch = next(generator)
+          except StopIteration:
+              # Update train set for new segments and reset data loader
+              self.train_set._update_segments_for_trainset(random_seed=i)
+              self.train_loader = self.generate_data_loader(self.train_set, shuffle=True, drop_last=False)
+              generator = iter(self.train_loader)
+              batch = next(generator)
+
+          # Train the model on a single batch
+          loss_value, loss_dict = self._train_by_single_batch(batch)
+          loss_dict = self._rename_dict(loss_dict, 'train')
+          self.training_loss.append(loss_value)
+
+          # Log training loss at the specified training cycle
+          if (i + 1) % self.iterations_per_training_cycle == 0 and self.make_log:
+              wandb.log(loss_dict, step=i)
+
+          # Log training accuracy periodically
+          if (i + 1) % (self.iterations_per_training_cycle * 10) == 0 and self.make_log:
+              validation_loss, num_nonmask_tokens, loss_dict, num_tokens_by_feature, correct_guess_by_feature = self._get_valid_loss_and_acc_from_batch(batch, train=True)
+              train_metric_dict = self._get_train_accuracy(num_nonmask_tokens, num_tokens_by_feature, correct_guess_by_feature)
+              train_metric_dict.update(loss_dict)
+              train_metric_dict = self._rename_dict(train_metric_dict, 'train')
+              wandb.log(train_metric_dict, step=i)
+
+              # delete variables to avoid memory leakages
+              del validation_loss, num_nonmask_tokens, loss_dict, num_tokens_by_feature, correct_guess_by_feature, train_metric_dict
+
+          # Perform validation at the specified interval
+          if (i + 1) % self.iterations_per_validation_cycle == 0:
+              self.model.eval()
+              validation_loss, validation_acc, validation_metric_dict = self.validate()
+              validation_metric_dict['acc'] = validation_acc
+              validation_metric_dict = self._rename_dict(validation_metric_dict, 'valid')
+
+              if self.make_log:
+                  wandb.log(validation_metric_dict, step=i)
+              self.validation_loss.append(validation_loss)
+              self.validation_acc.append(validation_acc)
+              self.best_valid_loss = min(validation_loss, self.best_valid_loss)
+
+              # Perform inference and logging after a certain number of cycles
+              if (i + 1) % (self.num_cycles_for_inference * self.iterations_per_validation_cycle) == 0 and self.infer_and_log:
+                  self.inference_and_log(i, self.num_uncond_generation, self.num_cond_generation, self.num_max_seq_len)
+
+              # Save a model checkpoint periodically
+              if (i + 1) % (self.iterations_per_validation_cycle * self.num_cycles_for_model_checkpoint) == 0:
+                  self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
+              self.model.train()
+
+              # delete variables to avoid memory leakages
+              del validation_loss, validation_acc, validation_metric_dict
+
+      # Save the final model after training
+      self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
 
   def _train_by_single_batch(self, batch):
     start_time = time.time()
