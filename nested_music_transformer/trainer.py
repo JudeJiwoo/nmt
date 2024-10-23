@@ -192,7 +192,7 @@ class LanguageModelTrainer:
                 self.model.train()
 
                 # delete variables to avoid memory leakages
-                del validation_loss, validation_acc, validation_metric_dict
+                del validation_acc, validation_metric_dict
 
         # Save the final model after training
         self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
