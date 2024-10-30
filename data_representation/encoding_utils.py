@@ -595,8 +595,9 @@ class Corpus2event_cp(Corpus2event_remi):
                                 chord_text = 'Chord_N_N'
                             if tempo_text == None:
                                 tempo_text = 'Tempo_N_N'
-                            events_list.append(self.create_cp_metrical_event(pos_text, chord_text, tempo_text))
                             chord_tempo_flag = True
+                            
+                    events_list.append(self.create_cp_metrical_event(pos_text, chord_text, tempo_text))
 
                     # add instrument and note
                     for instrument_idx in pruned_instrument_note_dict:
