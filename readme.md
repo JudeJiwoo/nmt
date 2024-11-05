@@ -23,7 +23,7 @@ _The International Society for Music Information Retrieval (ISMIR)_, 2024
 
 ## Introduction
 
-The **Nested Music Transformer** is a model designed to enhance sequence generation tasks for music composition. It introduces a novel nested attention mechanism that enables better hierarchical structure modeling within musical sequences. This approach is particularly useful for capturing both local and global patterns in music.
+The **Nested Music Transformer (NMT)** is a novel architecture designed to improve efficiency and performance in symbolic music and audio token generation. Unlike conventional models that flatten sequences, NMT decodes compound tokens (bundles of musical features) in a fully sequential and memory-efficient manner. It incorporates two transformers—a main decoder for overall sequence modeling and a sub-decoder for each token's subtleties—enabling more nuanced musical representations. NMT has demonstrated strong performance in generating symbolic music and discrete audio tokens, achieving competitive results with reduced computational demands.
 
 ---
 
