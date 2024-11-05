@@ -39,7 +39,7 @@ To install the necessary dependencies, please follow these steps:
 
 2. **Set up a pipenv environment and install dependencies:**
     ```bash
-    pipenv install --python 3.x  # Replace 3.x with your specific Python version, e.g., 3.8
+    pipenv install --python 3.x  # Replace 3.x with your specific Python version, e.g., 3.10
     ```
 
 3. **Activate the pipenv shell:**
@@ -133,7 +133,7 @@ Please cite the following paper if you use the code provided in this repository.
 ," _25th International Society for Music Information Retrieval Conference (ISMIR)_, 2024.
 
 ```bibtex
-@inproceedings{ryu2023nmt,
+@inproceedings{ryu2024nmt,
     author = {Jiwoo Ryu, Hao-Wen Dong, Jongmin Jung and Dasaem Jeong},
     title = {Nested Music Transformer},
     booktitle = {25th International Society for Music Information Retrieval Conference (ISMIR)},
