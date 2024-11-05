@@ -1,7 +1,7 @@
 defaults:
   - nn_params: nb5_embSum_NMT
 
-dataset: SOD # Pop1k7, Pop909, LakhClean, SOD
+dataset: SOD # Pop1k7, Pop909, SOD, LakhClean
 use_ddp: False # True, False | distributed data parallel
 use_fp16: True # True, False | mixed precision training
 
@@ -14,7 +14,7 @@ train_params:
   num_cycles_for_model_checkpoint: 10 # number of cycles for model checkpoint, iterations_per_validation_cycle * num_cycles_for_model_checkpoint
   iterations_per_training_cycle: 10 # number of iterations for logging training loss
   iterations_per_validation_cycle: 3000 # number of iterations for validation process
-  input_length: 1024  # input sequence length
+  input_length: 3072  # input sequence length
   # you can use focal loss, it it's not used, set focal_gamma to 0
   focal_alpha: 1
   focal_gamma: 0
