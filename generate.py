@@ -99,6 +99,8 @@ def main():
   threshold = args.threshold
   temperature = args.temperature
 
+  first_pred_feature = config.data_params.first_pred_feature
+
   # conditioned generation
   if args.generation_type == 'conditioned':
     generated_sample_path = wandb_dir / exp_code / f'generated_samples_with_{args.num_target_measure}_measures_prompt_{sampling_method}_threshold_{threshold}_temperature_{temperature}'
@@ -119,12 +121,12 @@ def main():
 
     for tune_in_idx, tune_name in dataset_for_prompt:
       if tune_name in prompt_name_list:
-        evaluator.generate_samples_with_prompt(generated_sample_path, args.num_target_measure, tune_in_idx, tune_name, sampling_method, threshold, temperature)
+        evaluator.generate_samples_with_prompt(generated_sample_path, args.num_target_measure, tune_in_idx, tune_name, first_pred_feature, sampling_method, threshold, temperature)
   # unconditioned generation
   else:
     generated_sample_path = wandb_dir / exp_code / f'generated_samples_unconditioned_{sampling_method}_threshold_{threshold}_temperature_{temperature}'
     generated_sample_path.mkdir(parents=True, exist_ok=True)
-    evaluator.generate_samples_unconditioned(generated_sample_path, args.num_samples, sampling_method, threshold, temperature)
+    evaluator.generate_samples_unconditioned(generated_sample_path, args.num_samples, first_pred_feature, sampling_method, threshold, temperature)
 
 if __name__ == "__main__":
   main()

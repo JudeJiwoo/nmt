@@ -422,7 +422,7 @@ class Evaluator:
       if i == num_target_samples:
         break
 
-  def generate_samples_with_prompt(self, save_dir, num_target_measures, tuneidx, tune_name, sampling_method=None, threshold=None, temperature=1.0):
+  def generate_samples_with_prompt(self, save_dir, num_target_measures, tuneidx, tune_name, first_pred_feature, sampling_method=None, threshold=None, temperature=1.0):
     encoding_scheme = self.config.nn_params.encoding_scheme
 
     in_beat_resolution_dict = {'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4}
@@ -434,12 +434,13 @@ class Evaluator:
 
     tuneidx = tuneidx.cuda()
     generated_sample = self.model.generate(0, self.input_len, condition=tuneidx, num_target_measures=num_target_measures, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
-    decoder(generated_sample, output_path=str(save_dir / f"{tune_name}.mid"))
+    generated_output = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
+    decoder(generated_output, output_path=str(save_dir / f"{tune_name}.mid"))
 
     prompt = self.model.decoder._prepare_inference(self.model.decoder.net.start_token, 0, tuneidx, num_target_measures=8)
     decoder(prompt, output_path=str(save_dir / f"{tune_name}_prompt.mid"))
 
-  def generate_samples_unconditioned(self, save_dir, num_samples, sampling_method, threshold, temperature):
+  def generate_samples_unconditioned(self, save_dir, num_samples, first_pred_feature, sampling_method, threshold, temperature):
     encoding_scheme = self.config.nn_params.encoding_scheme
 
     in_beat_resolution_dict = {'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4}
@@ -451,4 +452,5 @@ class Evaluator:
 
     for i in range(num_samples):
       generated_sample = self.model.generate(0, self.input_len, condition=None, num_target_measures=None, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
-      decoder(generated_sample, output_path=str(save_dir / f"{i}.mid"))
+      generated_output = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
+      decoder(generated_output, output_path=str(save_dir / f"{i}.mid"))
