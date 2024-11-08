@@ -195,7 +195,7 @@ class LanguageModelTrainer:
                 del validation_acc, validation_metric_dict
 
         # Save the final model after training
-        self.save_model(self.save_dir / f'iter{i}_loss{validation_loss:.4f}.pt')
+        self.save_model(self.save_dir / f'checkpoint_last.pt')
 
     def _train_by_single_batch(self, batch):
         """

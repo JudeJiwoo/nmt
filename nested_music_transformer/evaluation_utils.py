@@ -3,6 +3,7 @@ from typing import Union
 from math import log
 from omegaconf import DictConfig
 from pathlib import Path
+import pickle
 
 import torch
 from tqdm.auto import tqdm
@@ -14,7 +15,10 @@ from .model_zoo import NestedMusicTransformer
 from .symbolic_encoding.data_utils import TuneCompiler
 from .symbolic_encoding.compile_utils import shift_and_pad
 from .symbolic_encoding.compile_utils import reverse_shift_and_pad_for_tensor
+from .symbolic_encoding import decoding_utils
 from .encodec.vocab_utils import EncodecVocab
+from .train_utils import adjust_prediction_order
+from data_representation import vocab_utils
 from data_representation.vocab_utils import LangTokenVocab
 
 def wandb_style_config_to_omega_config(wandb_conf):
@@ -43,12 +47,17 @@ def get_best_ckpt_path_and_config(wandb_dir, code):
   if dir is None:
     raise ValueError('No such code in wandb_dir')
   ckpt_dir = dir / 'files' / 'checkpoints'
-  pt_fns = sorted(list(ckpt_dir.glob('*.pt')), key=lambda fn: int(fn.stem.split('_')[0].replace('iter', '')))
-  
-  last_ckpt_fn = pt_fns[-1]
+
   config_path = dir / 'files'  / 'config.yaml'
   vocab_path = next(ckpt_dir.glob('vocab*'))
   metadata_path = next(ckpt_dir.glob('*metadata.json'))
+
+  # if there is pt file ending with 'last', return it 
+  if len(list(ckpt_dir.glob('*last.pt'))) > 0:
+    last_ckpt_fn = next(ckpt_dir.glob('*last.pt'))
+  else:
+    pt_fns = sorted(list(ckpt_dir.glob('*.pt')), key=lambda fn: int(fn.stem.split('_')[0].replace('iter', '')))
+    last_ckpt_fn = pt_fns[-1]
 
   return last_ckpt_fn, config_path, metadata_path, vocab_path
 
@@ -56,6 +65,7 @@ def prepare_model_and_dataset_from_config(config: DictConfig, metadata_path:str,
   nn_params = config.nn_params
   dataset_name = config.dataset
   vocab_path = Path(vocab_path)
+
   if 'Encodec' in dataset_name:
     encodec_tokens_path = Path(f"dataset/maestro-v3.0.0-encodec_tokens")
     encodec_dataset = EncodecDataset(config, encodec_tokens_path, None, None)
@@ -64,18 +74,30 @@ def prepare_model_and_dataset_from_config(config: DictConfig, metadata_path:str,
     
     lm_model:model_zoo.LanguageModelTransformer= getattr(model_zoo, nn_params.model_name)(config, vocab_sizes)
   else:
-    # midi_path = Path(f'dataset/MIDI_dataset/{dataset_name}')
-    encoding_scheme = config.data_params.encoding_scheme
+    encoding_scheme = config.nn_params.encoding_scheme
+    num_features = config.nn_params.num_features
+    
+    # get vocab
+    vocab_name = {'remi':'LangTokenVocab', 'cp':'MusicTokenVocabCP', 'nb':'MusicTokenVocabNB'}
+    selected_vocab_name = vocab_name[encoding_scheme]
+
+    vocab = getattr(vocab_utils, selected_vocab_name)(
+      in_vocab_file_path=vocab_path,
+      event_data=None,
+      encoding_scheme=encoding_scheme, 
+      num_features=num_features)
+
+    # Initialize symbolic dataset based on dataset name and configuration parameters
     symbolic_dataset = getattr(data_utils, dataset_name)(
-                              in_vocab_file_path=vocab_path,
-                              out_vocab_path=None,
-                              encoding_scheme=encoding_scheme,
-                              num_features=config.data_params.num_features,
-                              debug=config.general.debug,
-                              aug_type=config.data_params.aug_type,
-                              input_length=config.train_params.input_length,
-                              first_pred_feature=config.data_params.first_pred_feature,
-                              )
+                                vocab=vocab,
+                                encoding_scheme=encoding_scheme,
+                                num_features=num_features,
+                                debug=config.general.debug,
+                                aug_type=config.data_params.aug_type,
+                                input_length=config.train_params.input_length,
+                                first_pred_feature=config.data_params.first_pred_feature,
+                                )
+    
     vocab_sizes = symbolic_dataset.vocab.get_vocab_size()
     print(f"---{nn_params.main_decoder}--- is used")
     print(f"---{dataset_name}--- is used")
@@ -83,22 +105,27 @@ def prepare_model_and_dataset_from_config(config: DictConfig, metadata_path:str,
     split_ratio = config.data_params.split_ratio
     train_set, valid_set, test_set = symbolic_dataset.split_train_valid_test_set(dataset_name=config.dataset, ratio=split_ratio, seed=42, save_dir=None)
 
-    ds_transformer = getattr(model_zoo, nn_params.model_name)(
-                            vocab=symbolic_dataset.vocab,
-                            input_length=config.train_params.input_length,
-                            prediction_order=nn_params.prediction_order,
-                            input_embedder_name=nn_params.input_embedder_name,
-                            main_decoder_name=nn_params.main_decoder_name,
-                            sub_decoder_name=nn_params.sub_decoder_name,
-                            sub_decoder_depth=nn_params.sub_decoder.num_layer if hasattr(nn_params, 'sub_decoder') else 0,
-                            sub_decoder_enricher_use=nn_params.sub_decoder.feature_enricher_use \
-                              if hasattr(nn_params, 'sub_decoder') and hasattr(nn_params.sub_decoder, 'feature_enricher_use') else False,
-                            dim=nn_params.main_decoder.dim_model,
-                            heads=nn_params.main_decoder.num_head,
-                            depth=nn_params.main_decoder.num_layer,
-                            dropout=nn_params.main_decoder.dropout,
-                            )
-  return ds_transformer, test_set, symbolic_dataset.vocab
+    # get proper prediction order according to the encoding scheme and target feature in the config
+    prediction_order = adjust_prediction_order(encoding_scheme, num_features, config.data_params.first_pred_feature, nn_params)
+
+    # Create the Transformer model based on configuration parameters
+    nested_music_transformer = getattr(model_zoo, nn_params.model_name)(
+                          vocab=symbolic_dataset.vocab,
+                          input_length=config.train_params.input_length,
+                          prediction_order=prediction_order,
+                          input_embedder_name=nn_params.input_embedder_name,
+                          main_decoder_name=nn_params.main_decoder_name,
+                          sub_decoder_name=nn_params.sub_decoder_name,
+                          sub_decoder_depth=nn_params.sub_decoder.num_layer if hasattr(nn_params, 'sub_decoder') else 0,
+                          sub_decoder_enricher_use=nn_params.sub_decoder.feature_enricher_use \
+                            if hasattr(nn_params, 'sub_decoder') and hasattr(nn_params.sub_decoder, 'feature_enricher_use') else False,
+                          dim=nn_params.main_decoder.dim_model,
+                          heads=nn_params.main_decoder.num_head,
+                          depth=nn_params.main_decoder.num_layer,
+                          dropout=nn_params.model_dropout,
+                          )
+    
+  return nested_music_transformer, test_set, symbolic_dataset.vocab
 
 def add_conti_in_valid(tensor, encoding_scheme):
   new_target = tensor.clone()
@@ -230,7 +257,7 @@ class Evaluator:
     self.count_by_class = {key:0 for key in self.vocab.feature_list}
     self.batch_size = batch_size
 
-    self.is_multiclass = True if config.data_params.encoding_scheme == 'nb' or config.data_params.encoding_scheme == 'cp' else False
+    self.is_multiclass = True if config.nn_params.encoding_scheme == 'nb' or config.nn_params.encoding_scheme == 'cp' else False
     self.first_pred_feature = self.config.data_params.first_pred_feature
 
     self.neglect_keywords = ['SSS', 'SSN', 'Conti', 'Metrical', 'Note']
@@ -368,3 +395,70 @@ class Evaluator:
     else:
       logits = logits[:, -1:].flatten(0,1).cpu()
       return logits, y
+
+  def prepare_prompt_and_ground_truth(self, save_dir, num_target_samples, num_target_measures):
+    encoding_scheme = self.config.nn_params.encoding_scheme
+
+    in_beat_resolution_dict = {'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4}
+    in_beat_resolution = in_beat_resolution_dict[self.config.dataset]
+
+    midi_decoder_dict = {'remi':'MidiDecoder4REMI', 'cp':'MidiDecoder4CP', 'nb':'MidiDecoder4NB'}
+    decoder_name = midi_decoder_dict[encoding_scheme]
+    decoder = getattr(decoding_utils, decoder_name)(vocab=self.vocab, in_beat_resolution=in_beat_resolution, dataset_name=self.config.dataset)
+
+    for i, (tuneidx, tune_name) in enumerate(self.test_set):
+      ground_truth_sample = tuneidx
+      try:
+        decoder(ground_truth_sample, output_path=str(save_dir / f"{i}_{tune_name}_gt.mid"))
+      except:
+        print(f"Error in generating {i}_{tune_name}.mid")
+
+      prompt = self.model.decoder._prepare_inference(start_token=self.model.decoder.net.start_token, manual_seed=0, condition=tuneidx, num_target_measures=num_target_measures)
+      try:
+        decoder(prompt, output_path=str(save_dir / f"{i}_{tune_name}_prompt.mid"))
+      except:
+        print(f"Error in generating {i}_{tune_name}_prompt.mid")
+      with open(str(save_dir / f"{i}_{tune_name}_prompt.pkl"), "wb") as f:
+        pickle.dump([self.vocab.idx2event[idx.item()] for idx in prompt.squeeze()], f)
+
+      if i == num_target_samples:
+        break
+
+  def generate_samples_with_prompt(self, save_dir, num_target_measures, tuneidx, tune_name, sampling_method=None, threshold=None, temperature=1.0):
+    encoding_scheme = self.config.nn_params.encoding_scheme
+
+    in_beat_resolution_dict = {'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4}
+    in_beat_resolution = in_beat_resolution_dict[self.config.dataset]
+
+    midi_decoder_dict = {'remi':'MidiDecoder4REMI', 'cp':'MidiDecoder4CP', 'nb':'MidiDecoder4NB'}
+    decoder_name = midi_decoder_dict[encoding_scheme]
+    decoder = getattr(decoding_utils, decoder_name)(vocab=self.vocab, in_beat_resolution=in_beat_resolution, dataset_name=self.config.dataset)
+
+    tuneidx = tuneidx.cuda()
+    generated_sample = self.model.generate(0, self.input_len, condition=tuneidx, num_target_measures=num_target_measures, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
+    decoder(generated_sample, output_path=str(save_dir / f"{tune_name}.mid"))
+    generated_sample_event = [self.vocab.idx2event[idx.item()] for idx in generated_sample.squeeze()]
+    with open(str(save_dir / f"{tune_name}.pkl"), "wb") as f:
+      pickle.dump(generated_sample_event, f)
+
+    prompt = self.model.decoder._prepare_inference(self.model.decoder.net.start_token, 0, tuneidx, num_target_measures=8)
+    decoder(prompt, output_path=str(save_dir / f"{tune_name}_prompt.mid"))
+    with open(str(save_dir / f"{tune_name}_prompt.pkl"), "wb") as f:
+      pickle.dump([self.vocab.idx2event[idx.item()] for idx in prompt.squeeze()], f)
+
+  def generate_samples_unconditioned(self, save_dir, num_samples, sampling_method, threshold, temperature):
+    encoding_scheme = self.config.nn_params.encoding_scheme
+
+    in_beat_resolution_dict = {'Pop1k7': 4, 'Pop909': 4, 'SOD': 12, 'LakhClean': 4}
+    in_beat_resolution = in_beat_resolution_dict[self.config.dataset]
+
+    midi_decoder_dict = {'remi':'MidiDecoder4REMI', 'cp':'MidiDecoder4CP', 'nb':'MidiDecoder4NB'}
+    decoder_name = midi_decoder_dict[encoding_scheme]
+    decoder = getattr(decoding_utils, decoder_name)(vocab=self.vocab, in_beat_resolution=in_beat_resolution, dataset_name=self.config.dataset)
+
+    for i in range(num_samples):
+      generated_sample = self.model.generate(0, self.input_len, condition=None, num_target_measures=None, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
+      decoder(generated_sample, output_path=str(save_dir / f"{i}.mid"))
+      generated_sample_event = [self.vocab.idx2event[idx.item()] for idx in generated_sample.squeeze()]
+      with open(str(save_dir / f"{i}.pkl"), "wb") as f:
+        pickle.dump(generated_sample_event, f)

@@ -201,7 +201,7 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
     return total_out, sampled_token
 
   @torch.inference_mode()
-  def generate(self, manual_seed, max_seq_len, condition=None, sampling_method=None, threshold=None, temperature=1):
+  def generate(self, manual_seed, max_seq_len, condition=None, num_target_measures=4, sampling_method=None, threshold=None, temperature=1):
     '''
     Autoregressively generates a sequence of tokens by repeatedly sampling the next token 
     until the desired maximum sequence length is reached or the end token is encountered.
@@ -218,7 +218,7 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
     - total_out: The generated sequence of tokens as a tensor.
     '''
     # Prepare the starting sequence for inference
-    total_out = self._prepare_inference(self.net.start_token, manual_seed, condition)
+    total_out = self._prepare_inference(self.net.start_token, manual_seed, condition, num_target_measures)
 
     # If a condition is provided, run one initial step
     if condition is not None:
@@ -303,8 +303,8 @@ class NestedMusicTransformer(nn.Module):
     return self.decoder(input_seq, target)
   
   @torch.inference_mode()
-  def generate(self, manual_seed, max_seq_len, condition=None, sampling_method=None, threshold=None, temperature=1):
-    return self.decoder.generate(manual_seed, max_seq_len, condition, sampling_method, threshold, temperature)
+  def generate(self, manual_seed, max_seq_len, condition=None, num_target_measures=4, sampling_method=None, threshold=None, temperature=1):
+    return self.decoder.generate(manual_seed, max_seq_len, condition, num_target_measures, sampling_method, threshold, temperature)
 
 class NestedMusicTransformer4Encodec(NestedMusicTransformer):
   def __init__(
