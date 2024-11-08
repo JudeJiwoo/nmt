@@ -45,7 +45,7 @@ def get_argument_parser():
   parser.add_argument(
       "-num_samples",
       type=int,
-      default=20,
+      default=30,
       help="number of samples to generate",
   )
   parser.add_argument(

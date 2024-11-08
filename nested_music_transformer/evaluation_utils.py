@@ -418,8 +418,6 @@ class Evaluator:
         decoder(prompt, output_path=str(save_dir / f"{i}_{tune_name}_prompt.mid"))
       except:
         print(f"Error in generating {i}_{tune_name}_prompt.mid")
-      with open(str(save_dir / f"{i}_{tune_name}_prompt.pkl"), "wb") as f:
-        pickle.dump([self.vocab.idx2event[idx.item()] for idx in prompt.squeeze()], f)
 
       if i == num_target_samples:
         break
@@ -437,14 +435,9 @@ class Evaluator:
     tuneidx = tuneidx.cuda()
     generated_sample = self.model.generate(0, self.input_len, condition=tuneidx, num_target_measures=num_target_measures, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
     decoder(generated_sample, output_path=str(save_dir / f"{tune_name}.mid"))
-    generated_sample_event = [self.vocab.idx2event[idx.item()] for idx in generated_sample.squeeze()]
-    with open(str(save_dir / f"{tune_name}.pkl"), "wb") as f:
-      pickle.dump(generated_sample_event, f)
 
     prompt = self.model.decoder._prepare_inference(self.model.decoder.net.start_token, 0, tuneidx, num_target_measures=8)
     decoder(prompt, output_path=str(save_dir / f"{tune_name}_prompt.mid"))
-    with open(str(save_dir / f"{tune_name}_prompt.pkl"), "wb") as f:
-      pickle.dump([self.vocab.idx2event[idx.item()] for idx in prompt.squeeze()], f)
 
   def generate_samples_unconditioned(self, save_dir, num_samples, sampling_method, threshold, temperature):
     encoding_scheme = self.config.nn_params.encoding_scheme
@@ -459,6 +452,3 @@ class Evaluator:
     for i in range(num_samples):
       generated_sample = self.model.generate(0, self.input_len, condition=None, num_target_measures=None, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
       decoder(generated_sample, output_path=str(save_dir / f"{i}.mid"))
-      generated_sample_event = [self.vocab.idx2event[idx.item()] for idx in generated_sample.squeeze()]
-      with open(str(save_dir / f"{i}.pkl"), "wb") as f:
-        pickle.dump(generated_sample_event, f)
