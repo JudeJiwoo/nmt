@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Union
 from multiprocessing import Pool, cpu_count
 from collections import defaultdict
+from fractions import Fraction
 
 import torch
 
@@ -279,6 +280,19 @@ class MusicTokenVocabCP(LangTokenVocab):
     unique_vocabs.insert(3, 'Note')
     return unique_vocabs
 
+  # Define custom sorting function
+  def sort_type_cp(self, item):
+      if item == 0:
+          return (0, 0)  # Move 0 to the beginning
+      elif isinstance(item, str):
+          if item.startswith("Bar"):
+              return (1, item)  # "Bar" items come next, sorted lexicographically
+          elif item.startswith("Beat"):
+              # Extract numeric part of "Beat_x" to sort numerically
+              beat_number = int(item.split('_')[1])
+              return (2, beat_number)  # "Beat" items come last, sorted by number
+      return (3, item)  # Catch-all for anything unexpected (shouldn't be necessary here)
+
   def _get_vocab(self, event_data, unique_vocabs=None):
     if event_data is not None:
         # Create vocab mappings (event2idx, idx2event) from the provided event data
@@ -317,9 +331,10 @@ class MusicTokenVocabCP(LangTokenVocab):
                 else:  # NB encoding scheme
                     unique_vocabs[key] = self._nb_sort_type(unique_vocabs[key])
             elif key == 'beat' and self.encoding_scheme == 'cp':  # Handle 'beat' vocab with 'cp' scheme
-                unique_vocabs[key].remove('Bar')
-                unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
-                unique_vocabs[key].insert(1, 'Bar')
+                # unique_vocabs[key].remove('Bar')
+                # unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), Fraction(x.split('_')[-1] if isinstance(x, str) else x)))
+                # unique_vocabs[key].insert(1, 'Bar')
+                unique_vocabs[key] = sorted(unique_vocabs[key], key = self.sort_type_cp)
             elif key == 'beat' and self.encoding_scheme == 'nb':  # Handle 'beat' vocab with 'nb' scheme
                 unique_vocabs[key] = sorted(unique_vocabs[key], key=lambda x: (not isinstance(x, int), int(x.split('_')[-1] if isinstance(x, str) else x)))
             elif key == 'instrument':  # Sort 'instrument' vocab by integer values

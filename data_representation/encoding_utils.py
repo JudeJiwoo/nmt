@@ -483,8 +483,8 @@ class Corpus2event_cp(Corpus2event_remi):
     def create_cp_bar_event(self, time_sig_change_flag=False, time_sig_name=None):
         meter_event = self.event_template.copy()
         if time_sig_change_flag:
-            meter_event['type'] = time_sig_name
-            meter_event['beat'] = 'Bar'
+            meter_event['type'] = 'Metrical'
+            meter_event['beat'] = f'Bar_{time_sig_name}'
         else:
             meter_event['type'] = 'Metrical'
             meter_event['beat'] = 'Bar'

@@ -128,7 +128,17 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
         measure_bool = (2 <= condition) & (condition < type_boundaries[1]) # between Bar_ts_start and Bar_ts_end 
         conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
       elif self.net.vocab.encoding_scheme == 'cp':
-        measure_bool = (condition[:,1] == 1)  # measure tokens
+        # find the start and end of the measure
+        beat_event2idx = self.net.vocab.event2idx['Beat']
+        for event, idx in beat_event2idx.items():
+          if event == 'Bar':
+            start_idx = idx
+          elif event.startswith('Beat'):
+            end_idx = idx
+            break
+        measure_bool = (condition >= start_idx) & (condition < end_idx)  # measure tokens
+        conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
+        # measure_bool = (condition[:,1] == 1)  # measure tokens
         conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
       elif self.net.vocab.encoding_scheme == 'nb':
         measure_bool = (condition[:,0] == 2) | (condition[:,0] >= 5)  # Empty measure or where new measure starts
