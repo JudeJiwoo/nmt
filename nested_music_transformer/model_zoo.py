@@ -129,7 +129,7 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
         conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
       elif self.net.vocab.encoding_scheme == 'cp':
         # find the start and end of the measure
-        beat_event2idx = self.net.vocab.event2idx['Beat']
+        beat_event2idx = self.net.vocab.event2idx['beat']
         for event, idx in beat_event2idx.items():
           if event == 'Bar':
             start_idx = idx
