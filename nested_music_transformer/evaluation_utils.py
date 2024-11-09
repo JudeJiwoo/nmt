@@ -434,8 +434,9 @@ class Evaluator:
 
     tuneidx = tuneidx.cuda()
     generated_sample = self.model.generate(0, self.input_len, condition=tuneidx, num_target_measures=num_target_measures, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
-    generated_output = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
-    decoder(generated_output, output_path=str(save_dir / f"{tune_name}.mid"))
+    if encoding_scheme == 'nb':
+      generated_sample = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
+    decoder(generated_sample, output_path=str(save_dir / f"{tune_name}.mid"))
 
     prompt = self.model.decoder._prepare_inference(self.model.decoder.net.start_token, 0, tuneidx, num_target_measures=8)
     decoder(prompt, output_path=str(save_dir / f"{tune_name}_prompt.mid"))
@@ -452,5 +453,6 @@ class Evaluator:
 
     for i in range(num_samples):
       generated_sample = self.model.generate(0, self.input_len, condition=None, num_target_measures=None, sampling_method=sampling_method, threshold=threshold, temperature=temperature)
-      generated_output = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
-      decoder(generated_output, output_path=str(save_dir / f"{i}.mid"))
+      if encoding_scheme == 'nb':
+        generated_sample = reverse_shift_and_pad_for_tensor(generated_sample, first_pred_feature)
+      decoder(generated_sample, output_path=str(save_dir / f"{i}.mid"))

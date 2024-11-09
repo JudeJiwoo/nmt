@@ -72,7 +72,7 @@ class VanillaTransformer_compiler():
     for i in range(len(self.data_list)):
       tune_in_idx, tune_name = self.data_list[i]
       tune_in_idx = torch.LongTensor(tune_in_idx)
-      if self.encoding_scheme == 'remi':
+      if self.encoding_scheme == 'remi' or self.encoding_scheme == 'cp':
         eos_token = torch.LongTensor(self.eos_token)
       else:
         eos_token = torch.LongTensor(self.eos_token)
