@@ -213,7 +213,14 @@ class MidiDecoder4CP(MidiDecoder4REMI):
         midi_obj.time_signature_changes.append(
           TimeSignature(numerator=int(cur_num), denominator=int(cur_denom), time=bar_pos))
       elif token_with_7infos[feature2idx['type']] == 'Metrical':
-        if token_with_7infos[feature2idx['beat']] == 'Bar':
+        if 'time_signature' in token_with_7infos[feature2idx['beat']]:
+          cur_num, cur_denom = token_with_7infos[feature2idx['beat']].split('_')[-1].split('/')
+          bar_pos += cur_bar_resol
+          new_bar_resol = int(default_ticks_per_beat * int(cur_num) * (4 / int(cur_denom)))
+          cur_bar_resol = new_bar_resol
+          midi_obj.time_signature_changes.append(
+            TimeSignature(numerator=int(cur_num), denominator=int(cur_denom), time=bar_pos))
+        elif token_with_7infos[feature2idx['beat']] == 'Bar':
           bar_pos += cur_bar_resol
         elif 'Beat' in str(token_with_7infos[feature2idx['beat']]):
           beat_pos = int(token_with_7infos[feature2idx['beat']].split('_')[1])

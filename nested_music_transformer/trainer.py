@@ -741,7 +741,7 @@ class LanguageModelTrainer4CompoundToken(LanguageModelTrainer):
     return total_validation_loss / total_num_tokens, total_num_correct_guess / total_num_valid_tokens, validation_metric_dict
 
   def _make_midi_from_generated_output(self, generated_output, iter, seed, condition=None):
-    if self.config.data_params.first_pred_feature != 'type':
+    if self.config.data_params.first_pred_feature != 'type' and self.config.nn_params.encoding_scheme == 'nb':
       generated_output = reverse_shift_and_pad_for_tensor(generated_output, self.config.data_params.first_pred_feature)
     if condition is not None:
       path_addition = "cond_"
