@@ -131,6 +131,8 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
         # find the start and end of the measure
         beat_event2idx = self.net.vocab.event2idx['beat']
         for event, idx in beat_event2idx.items():
+          if event == 0:
+            continue
           if event == 'Bar':
             start_idx = idx
           elif event.startswith('Beat'):
