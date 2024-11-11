@@ -138,7 +138,7 @@ class NestedMusicTransformerAutoregressiveWrapper(nn.Module):
           elif event.startswith('Beat'):
             end_idx = idx
             break
-        measure_bool = (condition >= start_idx) & (condition < end_idx)  # measure tokens
+        measure_bool = (condition[:,1] >= start_idx) & (condition[:,1] < end_idx)  # measure tokens
         conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
         # measure_bool = (condition[:,1] == 1)  # measure tokens
         conditional_input_len = torch.where(measure_bool)[0][num_target_measures].item()
