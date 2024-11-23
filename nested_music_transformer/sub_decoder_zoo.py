@@ -245,7 +245,7 @@ class RNN(SubDecoderClass):
   def forward(self, input_dict, sampling_method=None, threshold=None, temperature=None):
     logits_dict = {}
     hidden_vec = input_dict['hidden_vec'] # B x T x d_model
-    target = input_dict['target'] # B x T x 7
+    target = input_dict['target'] # B x T x num_sub_tokens-1
     hidden_vec_reshape = hidden_vec.reshape((hidden_vec.shape[0]*hidden_vec.shape[1], -1)).unsqueeze(1) # (B*T) x 1 x d_model
     input_seq = hidden_vec_reshape # (B*T) x 1 x d_model
     
@@ -309,7 +309,7 @@ class SelfAttention(SubDecoderClass):
     
     self.sub_decoder_BOS_emb = nn.Parameter(torch.zeros(dim), requires_grad=True)
     
-    window_size = 1 # number of previous hidden vector of tokens from the main decoder
+    window_size = 1 # number of previous output of the main decoder to be used in the sub-decoder
     causal_mask = generate_causality_mask_on_window(size=window_size + len(prediction_order), window_size=window_size)
     self.register_buffer('causal_mask', causal_mask)
 
@@ -356,7 +356,7 @@ class SelfAttention(SubDecoderClass):
     elif apply_type == 'last':
       pos = torch.arange(tgt.shape[1]).to(tgt.device)
       pos = pos.unsqueeze(0).repeat(tgt.shape[0], 1)
-      pos_emb = self.pos_enc(pos.long()) # (B*T) x (window_size + BOS + num_features-1) x dim
+      pos_emb = self.pos_enc(pos.long()) # (B*T) x (window_size + BOS + num_sub_tokens-1) x dim
       # zero out the pos_emb except for the last token
       pos_emb[:, :-1, :] = 0
       tgt_pos = tgt + pos_emb
@@ -378,13 +378,13 @@ class SelfAttention(SubDecoderClass):
       feature_emb = self.emb_layer.get_emb_by_key(feature, target[..., feature_idx]) # B x T x emb_size
       feature_emb_reshape = feature_emb.reshape((feature_emb.shape[0]*feature_emb.shape[1], 1, -1)) # (B*T) x 1 x emb_size
       input_seq_list.append(feature_emb_reshape)
-    memory_tensor = torch.cat(input_seq_list, dim=1) # (B*T) x (window_size + BOS + 7) x d_model
+    memory_tensor = torch.cat(input_seq_list, dim=1) # (B*T) x (window_size + BOS + num_sub_tokens-1) x d_model
     return memory_tensor
 
   def forward(self, input_dict, sampling_method=None, threshold=None, temperature=None):
     logits_dict = {}
     hidden_vec = input_dict['hidden_vec'] # B x T x d_model
-    target = input_dict['target'] # B x T x 8
+    target = input_dict['target'] # B x T x num_sub_tokens
     hidden_vec_reshape = hidden_vec.reshape((hidden_vec.shape[0]*hidden_vec.shape[1], 1, -1)) # (B*T) x 1 x d_model
     input_seq_list = self._prepare_input_seq_list(hidden_vec_reshape, target)
     
@@ -410,8 +410,8 @@ class SelfAttention(SubDecoderClass):
     
     # ---- Training ---- #
     # preparing for training
-    input_seq_tensor = self._prepare_token_embedding_for_teacher_forcing(input_seq_list, target) # (B*T) x (window_size + BOS + num_features-1) x d_model
-    pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS + num_features-1) x d_model
+    input_seq_tensor = self._prepare_token_embedding_for_teacher_forcing(input_seq_list, target) # (B*T) x (window_size + BOS + num_sub_tokens-1) x d_model
+    pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS + num_sub_tokens-1) x d_model
     # get output using self-attention
     output = self.transformer_decoder(pos_target_tensor)
     for idx, feature in enumerate(self.prediction_order):
@@ -467,9 +467,7 @@ class SelfAttentionUniAudio(SelfAttention):
     # ---- Generate(Inference) ---- #
     if target is None:
       sampled_token_dict = {}
-      # input_seq_tensor = torch.cat(input_seq_list, dim=1) # (B*T) x (window_size + BOS) x d_model
       pos_target_tensor = self._apply_pos_enc(hidden_vec_reshape, apply_type='all') # (B*T) x (window_size + BOS) x d_model
-      # pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS) x d_model
       for idx, feature in enumerate(self.prediction_order):
         output = self.transformer_decoder(pos_target_tensor)
         logit = self.hidden2logit[f"layer_{feature}"](output[:, -1:])
@@ -486,8 +484,8 @@ class SelfAttentionUniAudio(SelfAttention):
     
     # ---- Training ---- #
     # preparing for training
-    input_seq_tensor = self._prepare_token_embedding_for_teacher_forcing(hidden_vec_reshape, target) # (B*T) x (window_size + BOS + num_features-1) x d_model
-    pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS + num_features-1) x d_model
+    input_seq_tensor = self._prepare_token_embedding_for_teacher_forcing(hidden_vec_reshape, target) # (B*T) x (window_size + BOS + num_sub_tokens-1) x d_model
+    pos_target_tensor = self._apply_pos_enc(input_seq_tensor, apply_type='all') # (B*T) x (window_size + BOS + num_sub_tokens-1) x d_model
     # get output using self-attention
     output = self.transformer_decoder(pos_target_tensor)
     for idx, feature in enumerate(self.prediction_order):
@@ -535,7 +533,7 @@ class CrossAttention(SubDecoderClass):
 
   def _apply_window_on_hidden_vec(self, hidden_vec):
     BOS_emb = self.enricher_BOS_emb.reshape(1,1,-1).repeat(hidden_vec.shape[0]*hidden_vec.shape[1], 1, 1) # (B*T) x 1 x d_model
-    # window_size = self.net_param.decoding_attention.decout_window_size
+    # through our experiments, we found that the size of the window doesn't affect the performance of the model much
     window_size = 1
     zero_vec = torch.zeros((hidden_vec.shape[0], window_size-1, hidden_vec.shape[2])).to(self.device) # B x (window_size-1) x d_model
     cat_hidden_vec = torch.cat([zero_vec, hidden_vec], dim=1) # B x (window_size-1+T) x d_model
@@ -545,9 +543,9 @@ class CrossAttention(SubDecoderClass):
     return new_hidden_vec
 
   def _apply_pos_enc(self, tgt):
-    pos = torch.arange(tgt.shape[1]).to(tgt.device) # 8
-    pos = pos.unsqueeze(0).repeat(tgt.shape[0], 1) # (B*T) x 8
-    tgt_pos = tgt + self.pos_enc(pos.long()) # (B*T) x 8 x d_model
+    pos = torch.arange(tgt.shape[1]).to(tgt.device) # num_sub_tokens
+    pos = pos.unsqueeze(0).repeat(tgt.shape[0], 1) # (B*T) x num_sub_tokens
+    tgt_pos = tgt + self.pos_enc(pos.long()) # (B*T) x num_sub_tokens x d_model
     return tgt_pos
 
   def _prepare_token_embedding_for_teacher_forcing(self, memory_list, target):
@@ -556,7 +554,7 @@ class CrossAttention(SubDecoderClass):
       feature_emb = self.emb_layer.get_emb_by_key(feature, target[..., feature_idx]) # B x T x emb_size
       feature_emb_reshape = feature_emb.reshape((feature_emb.shape[0]*feature_emb.shape[1], 1, -1)) # (B*T) x 1 x emb_size
       memory_list.append(feature_emb_reshape)
-    memory_tensor = torch.cat(memory_list, dim=1) # (B*T) x (BOS + num_features-1) x d_model
+    memory_tensor = torch.cat(memory_list, dim=1) # (B*T) x (BOS + num_sub_tokens-1) x d_model
     return memory_tensor
 
   def _prepare_memory_list(self, hidden_vec, target=None):
@@ -577,7 +575,7 @@ class CrossAttention(SubDecoderClass):
     if self.sub_decoder_enricher_use:
       window_applied_hidden_vec = self._apply_window_on_hidden_vec(hidden_vec) # (B*T) x window_size x d_model
     hidden_vec_reshape = hidden_vec.reshape((hidden_vec.shape[0]*hidden_vec.shape[1], 1, -1)) # (B*T) x 1 x d_model
-    input_seq = hidden_vec_reshape.repeat(1, len(self.prediction_order), 1) # (B*T) x 8 x d_model
+    input_seq = hidden_vec_reshape.repeat(1, len(self.prediction_order), 1) # (B*T) x num_sub_tokens x d_model
     input_seq_pos = self._apply_pos_enc(input_seq)
     # prepare memory
     memory_list = self._prepare_memory_list(hidden_vec=hidden_vec, target=target)
@@ -609,16 +607,16 @@ class CrossAttention(SubDecoderClass):
       return logits_dict, sampled_token_dict
     
     # ---- Training ---- #
-    memory_tensor = self._prepare_token_embedding_for_teacher_forcing(memory_list, target) # (B*T) x (BOS + num_features-1) x d_model
+    memory_tensor = self._prepare_token_embedding_for_teacher_forcing(memory_list, target) # (B*T) x (BOS + num_sub_tokens-1) x d_model
     # apply feature enricher to memory
     if self.sub_decoder_enricher_use:
       input_dict = {'input_seq': memory_tensor, 'memory': window_applied_hidden_vec}
       input_dict = self.feature_enricher_layers(input_dict)
-      memory_tensor = input_dict['input_seq'] # (B*T) x num_features x d_model
+      memory_tensor = input_dict['input_seq'] # (B*T) x num_sub_tokens x d_model
     # implement sub decoder cross attention
     input_dict = {'input_seq': input_seq_pos, 'memory': memory_tensor, 'memory_mask': self.causal_ca_mask}
     input_dict = self.sub_decoder_layers(input_dict)
-    attn_output = input_dict['input_seq'] # (B*T) x num_features x d_model
+    attn_output = input_dict['input_seq'] # (B*T) x num_sub_tokens x d_model
     # get prob
     for idx, feature in enumerate(self.prediction_order):
       feature_pos = self.feature_order_in_output[feature]
