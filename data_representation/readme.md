@@ -1,3 +1,36 @@
+# Dataset Download
+
+Our model supports four different datasets:
+
+- **Symbolic Orchestral Database (SOD)**: [Link](https://qsdfo.github.io/LOP/database.html)  
+- **Lakh MIDI Dataset (Clean version)**: [Link](https://colinraffel.com/projects/lmd/)  
+- **Pop1k7**: [Link](https://github.com/YatingMusic/compound-word-transformer)  
+- **Pop909**: [Link](https://github.com/music-x-lab/POP909-Dataset)  
+
+### Download Instructions
+
+You can download the datasets via the command line:
+
+```sh
+# SOD
+wget https://qsdfo.github.io/LOP/database/SOD.zip
+
+# LakhClean
+wget http://hog.ee.columbia.edu/craffel/lmd/clean_midi.tar.gz
+```
+
+For Pop1k7, the official repository link is currently unavailable. However, you can download it from this Google Drive link:
+[Download Pop1k7](https://drive.google.com/file/d/1GnbELjE-kQ4WOkBmZ3XapFKIaltySRyV/view?usp=drive_link)
+
+For Pop909, the dataset is uploaded in the repository.
+
+### Using Your Own Dataset
+If you prefer to use your own dataset, you can modify the dataset class accordingly. Alternatively, for a simpler approach, rename your dataset to match one of the following options:
+
+- SOD: Use this for score-based MIDI datasets that require finer-grained quantization (supports up to 32nd note triplet level quantization).
+- LakhClean: Suitable for score-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization).
+- Pop1k7: Ideal for expressive-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization).
+
 # Data Representation
 
 <p align="center">
