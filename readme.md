@@ -59,7 +59,7 @@ This will create an isolated environment with the exact dependencies listed in `
 
 ## Preprocessing
 
-You can download and preprocess the dataset following the instructions in the data_representation folder.
+You can download and preprocess the dataset following the instructions in the [data_representation](./data_representation) folder.
 
 ## Training
 
