@@ -65,7 +65,7 @@ You can download and preprocess the dataset following the instructions in the da
 
 ### Pretrained Models
 
-The pretrained models can be found [here](https://).
+The pretrained models can be found [here](https://drive.google.com/drive/folders/12wI1W-cTIF_hKTv6Fp7FAH9pLIRzryyn?usp=sharing).
 
 ### Training Guide
 
@@ -114,7 +114,7 @@ The generation process leverages the trained models stored in Weights and Biases
 
 The wandb folder should be located at:
 ```
-/nmt/wandb/sod_remi # example of the wandb experiment folder name
+/nmt/wandb/SOD_nb_5features_NMT # example of the wandb experiment folder name
 ```
 
 ### Usage
@@ -122,8 +122,17 @@ The wandb folder should be located at:
 To run the generation script, set the correct experiment folder name and add it after the generate.py command:
 
 ```bash
-python generate.py sod_remi
+python generate.py -wandb_exp_dir SOD_nb_5features_NMT -choose_selected_tunes
 ```
+   - **Key Parameters**:
+    - `wandb_exp_dir`: Specifies the directory of the wandb experiment folder containing the trained model. This parameter is mandatory and determines the model used for generation.
+    - `generation_type`: Defines whether the generation should be conditioned (e.g., on specific input data) or unconditioned (generated freely). Defaults to `conditioned`.
+    - `sampling_method`: Determines the sampling method to use during generation. Options include `top_p` (nucleus sampling) and `top_k` (truncating the probability distribution). Defaults to `top_p`.
+    - `threshold`: Sets the probability threshold for the chosen sampling method. For instance, it may represent the cumulative probability for `top_p` sampling. Defaults to `0.99`.
+    - `temperature`: Controls the randomness of the sampling process. Higher values produce more diverse outputs, while lower values make the model more deterministic. Defaults to `1.15`.
+    - `num_samples`: Specifies the number of samples to generate per run. Defaults to `30`.
+    - `num_target_measure`: Defines the number of target measures for conditioned generation. This parameter is relevant only when using `conditioned` generation. Defaults to `4`.
+    - `choose_selected_tunes`: A boolean flag that, if set, ensures generation is performed using selected tunes. This is applicable only for the SOD dataset.
 
 ## Citation
 
