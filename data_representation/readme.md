@@ -63,19 +63,19 @@ We focus on symbolic music and limit the use of musical features to a select few
 ## 1. MIDI to Corpus
 In this step, we convert MIDI files into a set of events containing various musical information. The MIDI files should be aligned with the beat and contain accurate time signature information. Place the MIDI files in `<nmt/dataset/MIDI_dataset>` and refer to the example files provided. Navigate to the `<nmt/data_representation>` folder and run the script. The converted data will be stored in `<nmt/dataset/represented_data/corpus>`.
 
-- Example usage: `python3 1_midi2corpus.py --dataset SOD --num_features 5`
+- Example usage: `python3 step1_midi2corpus.py --dataset SOD --num_features 5`
 
 ## 2. Corpus to Event
 We provide three types of representations: **REMI**, **Compound Word (CP)**, and **Note-based Encoding (NB)**. The converted data will be stored in `<nmt/dataset/represented_data/events>`.
 
-- Example usage: `python3 2_corpus2event.py --dataset SOD --num_features 5 --encoding nb`
+- Example usage: `python3 step2_corpus2event.py --dataset SOD --num_features 5 --encoding nb`
 
 ## 3. Creating Vocabulary
 This script creates a vocabulary in the `<nmt/vocab>` folder. The vocabulary includes event-to-index pair information.
 
-- Example usage: `python3 3_creating_vocab.py --dataset SOD --num_features 5 --encoding nb`
+- Example usage: `python3 step3_creating_vocab.py --dataset SOD --num_features 5 --encoding nb`
 
 ## 4. Event to Index
 In this step, we convert events into indices for efficient model training. The converted data will be stored in `<nmt/dataset/represented_data/tuneidx>`.
 
-- Example usage: `python3 4_event2tuneidx.py --dataset SOD --num_features 5 --encoding nb`
+- Example usage: `python3 step4_event2tuneidx.py --dataset SOD --num_features 5 --encoding nb`
