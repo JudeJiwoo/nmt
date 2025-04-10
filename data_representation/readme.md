@@ -22,7 +22,7 @@ wget http://hog.ee.columbia.edu/craffel/lmd/clean_midi.tar.gz
 For Pop1k7, the official repository link is currently unavailable. However, you can download it from this Google Drive link:
 [Download Pop1k7](https://drive.google.com/file/d/1GnbELjE-kQ4WOkBmZ3XapFKIaltySRyV/view?usp=drive_link)
 
-For Pop909, the dataset is uploaded in the repository.
+For Pop909, the dataset is uploaded in the official Github repository: [Repository link](https://github.com/music-x-lab/POP909-Dataset)
 
 ### Using Your Own Dataset
 If you prefer to use your own dataset, you can modify the dataset class accordingly. Alternatively, for a simpler approach, rename your dataset to match one of the following options:
