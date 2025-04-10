@@ -25,11 +25,11 @@ For Pop1k7, the official repository link is currently unavailable. However, you 
 For Pop909, the dataset is uploaded in the official Github repository: [Repository link](https://github.com/music-x-lab/POP909-Dataset)
 
 ### Using Your Own Dataset
-If you prefer to use your own dataset, you can modify the dataset class accordingly. Alternatively, for a simpler approach, rename your dataset to match one of the following options:
+If you plan to use your own dataset, you can modify the dataset class in the data_utils.py script under symbolic_encoding folder inside the nested_music_transformer folder. Alternatively, for a simpler approach, rename your dataset to match one of the following options:
 
-- SOD: Use this for score-based MIDI datasets that require finer-grained quantization (supports up to 32nd note triplet level quantization).
-- LakhClean: Suitable for score-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization).
-- Pop1k7: Ideal for expressive-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization).
+- SOD: Use this for score-based MIDI datasets that require finer-grained quantization (supports up to 16th note triplet level quantization; 24 samples per quarter note).
+- LakhClean: Suitable for score-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization; 4 samples per quarter note).
+- Pop1k7, Pop909: Ideal for expressive-based MIDI datasets requiring coarse-grained quantization (supports up to 16th note level quantization; 4 samples per quarter note).
 
 # Data Representation
 
