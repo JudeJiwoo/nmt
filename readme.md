@@ -151,4 +151,6 @@ Please cite the following paper if you use the code provided in this repository.
 ```
 
 ## Acknowledgments
+The main decoder (first decoder of the Nested Architecture) is based on the [x-transformers](https://github.com/lucidrains/x-transformers) library developed by [lucidrains](https://github.com/lucidrains).
+
 This research was supported by the National R&D Program through the National Research Foundation of Korea (NRF) funded by the Korean Government (MSIT) (RS2023-00252944, Korean Traditional Gagok Generation Using Deep Learning).
